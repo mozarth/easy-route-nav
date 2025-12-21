@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { MapPin, AlertCircle, ArrowLeft, ExternalLink, Loader2, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
+import PropertyMap from '@/components/PropertyMap';
 import { getPropertyBySlug, logAccess } from '@/lib/storage';
 import { Property } from '@/types/property';
 
@@ -138,6 +139,9 @@ const PropertyPage = () => {
 
       {/* Content */}
       <main className="container max-w-2xl mx-auto px-4 py-8">
+        {/* Custom Map for Colinas */}
+        <PropertyMap propertySlug={property.slug} />
+
         {/* Description */}
         {property.description && (
           <div className="glass-card p-6 mb-6">

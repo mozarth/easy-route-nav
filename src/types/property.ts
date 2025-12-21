@@ -9,6 +9,7 @@ export interface Property {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  hasCustomMap?: boolean;
 }
 
 export interface AccessLog {
@@ -88,5 +89,18 @@ export const initialProperties: Property[] = [
     isActive: true,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
+  },
+  {
+    id: '6',
+    name: 'Colinas de Juanito Laguna',
+    slug: 'colinas',
+    latitude: 6.09420,
+    longitude: -75.49711,
+    address: 'Las Palmas-La Fé, Retiro, Antioquia',
+    description: 'Exclusivo condominio campestre con múltiples lotes y áreas de protección',
+    isActive: true,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+    hasCustomMap: true,
   },
 ];
