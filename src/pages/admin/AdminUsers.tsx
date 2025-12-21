@@ -56,7 +56,7 @@ const userSchema = z.object({
 });
 
 const AdminUsers = () => {
-  const { logout, isAdmin } = useAuth();
+  const { logout, isAdmin, signup } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -163,7 +163,6 @@ const AdminUsers = () => {
         });
       } else {
         // Create new user via signup
-        const { signup } = useAuth();
         const { error } = await signup(
           formData.email, 
           formData.password, 
