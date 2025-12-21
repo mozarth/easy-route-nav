@@ -11,7 +11,8 @@ import {
   Download,
   QrCode,
   BarChart3,
-  Home
+  Home,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
@@ -92,6 +93,13 @@ const AdminDashboard = () => {
           >
             <QrCode className="w-5 h-5" />
             Códigos QR
+          </Link>
+          <Link 
+            to="/admin/users" 
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors"
+          >
+            <Users className="w-5 h-5" />
+            Usuarios
           </Link>
         </nav>
 
