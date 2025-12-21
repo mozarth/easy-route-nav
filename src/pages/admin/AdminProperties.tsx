@@ -13,7 +13,8 @@ import {
   Home,
   LogOut,
   Save,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,7 @@ const AdminProperties = () => {
     longitude: '',
     address: '',
     description: '',
+    etapa: '',
   });
 
   const loadProperties = () => {
@@ -72,6 +74,7 @@ const AdminProperties = () => {
       longitude: '',
       address: '',
       description: '',
+      etapa: '',
     });
     setEditingProperty(null);
     setShowForm(false);
@@ -86,6 +89,7 @@ const AdminProperties = () => {
       longitude: property.longitude.toString(),
       address: property.address || '',
       description: property.description || '',
+      etapa: (property as any).etapa || '',
     });
     setShowForm(true);
   };
@@ -172,6 +176,13 @@ const AdminProperties = () => {
           >
             <QrCode className="w-5 h-5" />
             Códigos QR
+          </Link>
+          <Link 
+            to="/admin/users" 
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors"
+          >
+            <Users className="w-5 h-5" />
+            Usuarios
           </Link>
         </nav>
 
