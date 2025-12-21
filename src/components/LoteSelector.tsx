@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { MapPin, Home, Navigation, ExternalLink } from 'lucide-react';
+import { MapPin, Home, Navigation, ExternalLink, QrCode, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Lote, getEtapas, getLotesByEtapa, formatCoordinates, COLINAS_ENTRADA } from '@/types/lote';
+import QRCode from 'qrcode';
 
 interface LoteSelectorProps {
   onLoteSelected: (lote: Lote | null) => void;
@@ -11,6 +12,8 @@ interface LoteSelectorProps {
 const LoteSelector = ({ onLoteSelected }: LoteSelectorProps) => {
   const [etapaSeleccionada, setEtapaSeleccionada] = useState<number | null>(null);
   const [loteSeleccionado, setLoteSeleccionado] = useState<Lote | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [showQR, setShowQR] = useState(false);
   
   const etapas = getEtapas();
   const lotesDisponibles = etapaSeleccionada ? getLotesByEtapa(etapaSeleccionada) : [];
@@ -19,12 +22,16 @@ const LoteSelector = ({ onLoteSelected }: LoteSelectorProps) => {
     const etapa = parseInt(value);
     setEtapaSeleccionada(etapa);
     setLoteSeleccionado(null);
+    setQrCodeUrl(null);
+    setShowQR(false);
     onLoteSelected(null);
   };
 
   const handleLoteChange = (value: string) => {
     const lote = lotesDisponibles.find(l => l.id === value);
     setLoteSeleccionado(lote || null);
+    setQrCodeUrl(null);
+    setShowQR(false);
     onLoteSelected(lote || null);
   };
 
@@ -36,6 +43,38 @@ const LoteSelector = ({ onLoteSelected }: LoteSelectorProps) => {
     const url = `https://www.google.com/maps/dir/${origin}/${destination}`;
     
     window.open(url, '_blank');
+  };
+
+  const generateQRCode = async () => {
+    if (!loteSeleccionado) return;
+    
+    const origin = `${COLINAS_ENTRADA.latitude},${COLINAS_ENTRADA.longitude}`;
+    const destination = `${loteSeleccionado.latitude},${loteSeleccionado.longitude}`;
+    const googleMapsUrl = `https://www.google.com/maps/dir/${origin}/${destination}`;
+    
+    try {
+      const qrDataUrl = await QRCode.toDataURL(googleMapsUrl, {
+        width: 250,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      });
+      setQrCodeUrl(qrDataUrl);
+      setShowQR(true);
+    } catch (err) {
+      console.error('Error generando QR:', err);
+    }
+  };
+
+  const downloadQR = () => {
+    if (!qrCodeUrl || !loteSeleccionado) return;
+    
+    const link = document.createElement('a');
+    link.download = `QR-Lote-${loteSeleccionado.numero}-Etapa-${loteSeleccionado.etapa}.png`;
+    link.href = qrCodeUrl;
+    link.click();
   };
 
   return (
@@ -108,19 +147,54 @@ const LoteSelector = ({ onLoteSelected }: LoteSelectorProps) => {
               </p>
             </div>
 
-            <Button 
-              onClick={openGoogleMapsRoute}
-              variant="accent"
-              className="w-full"
-            >
-              <Navigation className="w-4 h-4" />
-              Ver Ruta al Lote
-              <ExternalLink className="w-4 h-4" />
-            </Button>
-            
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              Se abrirá Google Maps desde la entrada del condominio
-            </p>
+            <div className="space-y-3">
+              <Button 
+                onClick={openGoogleMapsRoute}
+                variant="accent"
+                className="w-full"
+              >
+                <Navigation className="w-4 h-4" />
+                Ver Ruta al Lote
+                <ExternalLink className="w-4 h-4" />
+              </Button>
+              
+              <p className="text-xs text-muted-foreground text-center">
+                Se abrirá Google Maps desde la entrada del condominio
+              </p>
+
+              {/* Botón para generar QR */}
+              <Button 
+                onClick={generateQRCode}
+                variant="outline"
+                className="w-full"
+              >
+                <QrCode className="w-4 h-4" />
+                Generar Código QR del Lote
+              </Button>
+
+              {/* QR Code generado */}
+              {showQR && qrCodeUrl && (
+                <div className="animate-fade-in bg-white rounded-lg p-4 flex flex-col items-center gap-3">
+                  <img 
+                    src={qrCodeUrl} 
+                    alt={`QR Code Lote ${loteSeleccionado.numero}`}
+                    className="w-48 h-48"
+                  />
+                  <p className="text-xs text-gray-600 text-center">
+                    Escanea para abrir la ruta en Google Maps
+                  </p>
+                  <Button
+                    onClick={downloadQR}
+                    variant="secondary"
+                    size="sm"
+                    className="w-full"
+                  >
+                    <Download className="w-4 h-4" />
+                    Descargar QR
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
