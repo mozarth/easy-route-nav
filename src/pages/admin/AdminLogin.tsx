@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Navigation, Lock, Mail, AlertCircle, Loader2 } from 'lucide-react';
+import { Navigation, Lock, Mail, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,8 +42,17 @@ const AdminLogin = () => {
         <div className="glass-card p-8">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 glow-primary">
-              <Navigation className="w-8 h-8 text-primary-foreground" />
+            <div className="relative w-16 h-16 mx-auto mb-4">
+              <Link 
+                to="/" 
+                className="absolute -left-2 -top-2 w-8 h-8 rounded-full bg-primary/20 hover:bg-primary/30 flex items-center justify-center transition-colors"
+                title="Volver al inicio"
+              >
+                <ArrowLeft className="w-4 h-4 text-primary" />
+              </Link>
+              <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center glow-primary">
+                <Navigation className="w-8 h-8 text-primary-foreground" />
+              </div>
             </div>
             <h1 className="text-2xl font-bold">Panel de Administración</h1>
             <p className="text-muted-foreground text-sm mt-2">
