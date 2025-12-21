@@ -56,7 +56,7 @@ const userSchema = z.object({
 });
 
 const AdminUsers = () => {
-  const { logout, isAdmin, signup } = useAuth();
+  const { logout, isAdmin, isLoading: authLoading, signup } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -73,12 +73,15 @@ const AdminUsers = () => {
   });
 
   useEffect(() => {
+    // Wait for auth to finish loading before checking admin status
+    if (authLoading) return;
+    
     if (!isAdmin) {
       navigate('/admin/dashboard');
       return;
     }
     loadUsers();
-  }, [isAdmin, navigate]);
+  }, [isAdmin, authLoading, navigate]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -458,7 +461,7 @@ const AdminUsers = () => {
         )}
 
         {/* Users List */}
-        {loading ? (
+        {loading || authLoading ? (
           <div className="text-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
             <p className="text-muted-foreground">Cargando usuarios...</p>
