@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Navigation, 
   MapPin, 
   Clock, 
   Smartphone, 
@@ -12,10 +11,10 @@ import {
   Download,
   QrCode,
   BarChart3,
-  Settings,
   Home
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { getProperties, getAccessLogs } from '@/lib/storage';
 import { Property, AccessLog } from '@/types/property';
@@ -52,7 +51,7 @@ const AdminDashboard = () => {
 
   const statCards = [
     { label: 'Total Propiedades', value: stats.totalProperties, icon: MapPin, color: 'primary' },
-    { label: 'Propiedades Activas', value: stats.activeProperties, icon: Navigation, color: 'success' },
+    { label: 'Propiedades Activas', value: stats.activeProperties, icon: MapPin, color: 'success' },
     { label: 'Total Accesos', value: stats.totalAccesses, icon: Clock, color: 'accent' },
     { label: 'Accesos Móviles', value: stats.mobileAccesses, icon: Smartphone, color: 'info' },
   ];
@@ -61,11 +60,8 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
       <aside className="fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border p-4 hidden lg:block">
-        <div className="flex items-center gap-3 mb-8 px-2">
-          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-            <Navigation className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <span className="font-semibold">QR Admin</span>
+        <div className="mb-8 px-2">
+          <Logo size="md" showText />
         </div>
 
         <nav className="space-y-1">
@@ -117,12 +113,7 @@ const AdminDashboard = () => {
       <main className="lg:ml-64 p-4 lg:p-8">
         {/* Mobile Header */}
         <div className="lg:hidden flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <Navigation className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-semibold">QR Admin</span>
-          </div>
+          <Logo size="md" showText />
           <Button variant="ghost" size="icon" onClick={logout}>
             <LogOut className="w-5 h-5" />
           </Button>
