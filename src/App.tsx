@@ -14,6 +14,7 @@ import AdminProperties from "./pages/admin/AdminProperties";
 import AdminHistory from "./pages/admin/AdminHistory";
 import AdminQRCodes from "./pages/admin/AdminQRCodes";
 import AdminQRCodesEtapas from "./pages/admin/AdminQRCodesEtapas";
+import AdminUsers from "./pages/admin/AdminUsers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/admin/history" element={<AdminHistory />} />
               <Route path="/admin/qr-codes" element={<AdminQRCodes />} />
               <Route path="/admin/qr-etapas" element={<AdminQRCodesEtapas />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
             </Route>
             
             {/* Catch-all */}

@@ -14,16 +14,168 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      access_logs: {
+        Row: {
+          accessed_at: string
+          device_type: string
+          id: string
+          property_id: string
+          property_name: string
+          user_agent: string | null
+        }
+        Insert: {
+          accessed_at?: string
+          device_type: string
+          id?: string
+          property_id: string
+          property_name: string
+          user_agent?: string | null
+        }
+        Update: {
+          accessed_at?: string
+          device_type?: string
+          id?: string
+          property_id?: string
+          property_name?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_logs_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          is_active?: boolean
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      properties: {
+        Row: {
+          address: string | null
+          created_at: string
+          description: string | null
+          etapa: string | null
+          has_custom_map: boolean
+          id: string
+          is_active: boolean
+          latitude: number
+          longitude: number
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          description?: string | null
+          etapa?: string | null
+          has_custom_map?: boolean
+          id?: string
+          is_active?: boolean
+          latitude: number
+          longitude: number
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          description?: string | null
+          etapa?: string | null
+          has_custom_map?: boolean
+          id?: string
+          is_active?: boolean
+          latitude?: number
+          longitude?: number
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_property_access: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          property_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          property_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          property_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_property_access_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_property_access_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_uuid: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      is_admin: { Args: { user_uuid: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "admin" | "portero" | "usuario"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +302,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["admin", "portero", "usuario"],
+    },
   },
 } as const
