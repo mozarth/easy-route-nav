@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Navigation, MapPin, AlertCircle, ArrowLeft, ExternalLink, Loader2 } from 'lucide-react';
+import { MapPin, AlertCircle, ArrowLeft, ExternalLink, Loader2, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/Logo';
 import { getPropertyBySlug, logAccess } from '@/lib/storage';
 import { Property } from '@/types/property';
 
@@ -113,13 +114,14 @@ const PropertyPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Logo fixed top-left */}
+      <div className="fixed top-4 left-4 z-50">
+        <Logo size="md" showText />
+      </div>
+
       {/* Header */}
-      <header className="bg-card/80 backdrop-blur-xl border-b border-border/50 sticky top-0 z-10">
+      <header className="bg-card/80 backdrop-blur-xl border-b border-border/50 sticky top-0 z-10 pt-16">
         <div className="container max-w-2xl mx-auto px-4 py-4">
-          <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-3">
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">Volver</span>
-          </Link>
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-xl gradient-primary flex items-center justify-center glow-primary">
               <MapPin className="w-7 h-7 text-primary-foreground" />
