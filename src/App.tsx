@@ -7,11 +7,13 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import PropertyPage from "./pages/PropertyPage";
+import LoteFinder from "./pages/LoteFinder";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProperties from "./pages/admin/AdminProperties";
 import AdminHistory from "./pages/admin/AdminHistory";
 import AdminQRCodes from "./pages/admin/AdminQRCodes";
+import AdminQRCodesEtapas from "./pages/admin/AdminQRCodesEtapas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +29,7 @@ const App = () => (
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
             <Route path="/property/:slug" element={<PropertyPage />} />
+            <Route path="/lote-finder/:etapa" element={<LoteFinder />} />
             
             {/* Admin Login */}
             <Route path="/admin" element={<AdminLogin />} />
@@ -37,6 +40,7 @@ const App = () => (
               <Route path="/admin/properties" element={<AdminProperties />} />
               <Route path="/admin/history" element={<AdminHistory />} />
               <Route path="/admin/qr-codes" element={<AdminQRCodes />} />
+              <Route path="/admin/qr-etapas" element={<AdminQRCodesEtapas />} />
             </Route>
             
             {/* Catch-all */}
