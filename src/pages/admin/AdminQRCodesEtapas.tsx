@@ -32,7 +32,8 @@ import { generateQRCodeDataURL } from '@/lib/qr-generator';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
-import { COLINAS_LOTES, Lote } from '@/types/lote';
+import { COLINAS_LOTES, Lote, getLotesByEtapa, COLINAS_ENTRADA } from '@/types/lote';
+import LoteSelector from '@/components/LoteSelector';
 
 interface EtapaQR {
   etapa: number;
@@ -526,6 +527,19 @@ const AdminQRCodesEtapas = () => {
                 ))}
               </div>
             )}
+
+            {/* Sección para generar QR de lotes específicos - Etapa 1 preseleccionada */}
+            <div className="mt-10">
+              <h2 className="text-xl font-semibold mb-4">Generar QR para Lote Específico</h2>
+              <p className="text-muted-foreground mb-4">
+                Selecciona un lote de la Etapa 1 para generar su código QR con la ruta directa.
+              </p>
+              <LoteSelector 
+                onLoteSelected={() => {}} 
+                defaultEtapa={1} 
+                hideEtapaSelector={true} 
+              />
+            </div>
           </div>
         </main>
       </div>

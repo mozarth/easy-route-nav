@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MapPin, Home, Navigation, ExternalLink, QrCode, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,16 +7,24 @@ import QRCode from 'qrcode';
 
 interface LoteSelectorProps {
   onLoteSelected: (lote: Lote | null) => void;
+  defaultEtapa?: number;
+  hideEtapaSelector?: boolean;
 }
 
-const LoteSelector = ({ onLoteSelected }: LoteSelectorProps) => {
-  const [etapaSeleccionada, setEtapaSeleccionada] = useState<number | null>(null);
+const LoteSelector = ({ onLoteSelected, defaultEtapa, hideEtapaSelector = false }: LoteSelectorProps) => {
+  const [etapaSeleccionada, setEtapaSeleccionada] = useState<number | null>(defaultEtapa || null);
   const [loteSeleccionado, setLoteSeleccionado] = useState<Lote | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
   
   const etapas = getEtapas();
   const lotesDisponibles = etapaSeleccionada ? getLotesByEtapa(etapaSeleccionada) : [];
+
+  useEffect(() => {
+    if (defaultEtapa) {
+      setEtapaSeleccionada(defaultEtapa);
+    }
+  }, [defaultEtapa]);
 
   const handleEtapaChange = (value: string) => {
     const etapa = parseInt(value);
@@ -85,28 +93,39 @@ const LoteSelector = ({ onLoteSelected }: LoteSelectorProps) => {
       </h2>
       
       <div className="space-y-4">
-        {/* Selector de Etapa */}
-        <div>
-          <label className="block text-sm font-medium text-muted-foreground mb-2">
-            Selecciona la Etapa
-          </label>
-          <Select onValueChange={handleEtapaChange}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Elige una etapa..." />
-            </SelectTrigger>
-            <SelectContent>
-              {[1, 2, 3].map((etapa) => (
-                <SelectItem key={etapa} value={etapa.toString()}>
-                  Etapa {etapa}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Selector de Etapa - Solo si no está oculto */}
+        {!hideEtapaSelector && (
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
+              Selecciona la Etapa
+            </label>
+            <Select value={etapaSeleccionada?.toString() || ''} onValueChange={handleEtapaChange}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Elige una etapa..." />
+              </SelectTrigger>
+              <SelectContent>
+                {[1, 2, 3].map((etapa) => (
+                  <SelectItem key={etapa} value={etapa.toString()}>
+                    Etapa {etapa}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Mostrar etapa fija cuando está oculto el selector */}
+        {hideEtapaSelector && etapaSeleccionada && (
+          <div className="bg-primary/10 rounded-lg p-3 border border-primary/20">
+            <p className="text-sm font-medium text-primary">
+              Etapa {etapaSeleccionada}
+            </p>
+          </div>
+        )}
 
         {/* Selector de Lote/Casa */}
         {etapaSeleccionada && (
-          <div className="animate-fade-in">
+          <div className={hideEtapaSelector ? '' : 'animate-fade-in'}>
             <label className="block text-sm font-medium text-muted-foreground mb-2">
               Selecciona el Lote o Casa
             </label>
