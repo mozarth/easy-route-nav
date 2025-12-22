@@ -13,7 +13,9 @@ import {
   Loader2,
   Shield,
   User,
-  Building
+  Building,
+  MapPin,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -42,6 +45,12 @@ interface UserProfile {
   role: UserRole;
   is_active: boolean;
   created_at: string;
+  assignedProperties?: string[];
+}
+
+interface PropertyOption {
+  id: string;
+  name: string;
 }
 
 const userSchema = z.object({
@@ -55,6 +64,7 @@ const AdminUsers = () => {
   const { logout, isAdmin, isLoading: authLoading, signup, profile } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [properties, setProperties] = useState<PropertyOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -66,6 +76,7 @@ const AdminUsers = () => {
     full_name: '',
     role: 'usuario' as UserRole,
   });
+  const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
 
   useEffect(() => {
     // Wait for auth to finish loading
@@ -78,15 +89,24 @@ const AdminUsers = () => {
       return;
     }
 
-    // Load users only for confirmed admins
+    // Load users and properties only for confirmed admins
     if (isAdmin) {
-      loadUsers();
+      loadUsersAndProperties();
     }
   }, [isAdmin, authLoading, profile]);
 
-  const loadUsers = async () => {
+  const loadUsersAndProperties = async () => {
     setLoading(true);
     try {
+      // Get properties
+      const { data: propsData, error: propsError } = await supabase
+        .from('properties')
+        .select('id, name')
+        .order('name');
+
+      if (propsError) throw propsError;
+      setProperties(propsData || []);
+
       // Get profiles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
@@ -104,12 +124,25 @@ const AdminUsers = () => {
         console.error('Error loading roles:', rolesError);
       }
 
-      // Map roles to profiles
-      const usersWithRoles = (profilesData || []).map(profile => {
-        const userRole = rolesData?.find(r => r.user_id === profile.user_id);
+      // Get property access for all users
+      const { data: accessData, error: accessError } = await supabase
+        .from('user_property_access')
+        .select('profile_id, property_id');
+
+      if (accessError) {
+        console.error('Error loading property access:', accessError);
+      }
+
+      // Map roles and property access to profiles
+      const usersWithRoles = (profilesData || []).map(profileData => {
+        const userRole = rolesData?.find(r => r.user_id === profileData.user_id);
+        const userProperties = (accessData || [])
+          .filter(a => a.profile_id === profileData.id)
+          .map(a => a.property_id);
         return {
-          ...profile,
-          role: (userRole?.role || profile.role || 'usuario') as UserRole,
+          ...profileData,
+          role: (userRole?.role || profileData.role || 'usuario') as UserRole,
+          assignedProperties: userProperties,
         };
       });
 
@@ -133,6 +166,7 @@ const AdminUsers = () => {
       full_name: '',
       role: 'usuario',
     });
+    setSelectedProperties([]);
     setEditingUser(null);
     setShowForm(false);
     setFormErrors({});
@@ -146,7 +180,40 @@ const AdminUsers = () => {
       full_name: user.full_name,
       role: user.role,
     });
+    setSelectedProperties(user.assignedProperties || []);
     setShowForm(true);
+  };
+
+  const togglePropertySelection = (propertyId: string) => {
+    setSelectedProperties((prev) =>
+      prev.includes(propertyId)
+        ? prev.filter((id) => id !== propertyId)
+        : [...prev, propertyId]
+    );
+  };
+
+  const savePropertyAccess = async (profileId: string) => {
+    // Delete existing property access for this profile
+    await supabase
+      .from('user_property_access')
+      .delete()
+      .eq('profile_id', profileId);
+
+    // Insert new property access entries
+    if (selectedProperties.length > 0 && formData.role !== 'admin') {
+      const accessEntries = selectedProperties.map((propertyId) => ({
+        profile_id: profileId,
+        property_id: propertyId,
+      }));
+
+      const { error } = await supabase
+        .from('user_property_access')
+        .insert(accessEntries);
+
+      if (error) {
+        console.error('Error saving property access:', error);
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -198,6 +265,9 @@ const AdminUsers = () => {
           console.error('Error updating role:', roleError);
         }
 
+        // Update property access (for portero/usuario)
+        await savePropertyAccess(editingUser.id);
+
         toast({
           title: 'Usuario actualizado',
           description: `${formData.full_name} ha sido actualizado.`,
@@ -227,7 +297,7 @@ const AdminUsers = () => {
         // Get the newly created user profile
         const { data: newProfile } = await supabase
           .from('profiles')
-          .select('user_id')
+          .select('id, user_id')
           .eq('email', formData.email)
           .maybeSingle();
 
@@ -238,6 +308,11 @@ const AdminUsers = () => {
               user_id: newProfile.user_id,
               role: formData.role,
             });
+
+          // Save property access for new user (if portero/usuario)
+          if (newProfile.id && formData.role !== 'admin') {
+            await savePropertyAccess(newProfile.id);
+          }
         }
 
         toast({
@@ -246,7 +321,7 @@ const AdminUsers = () => {
         });
       }
 
-      await loadUsers();
+      await loadUsersAndProperties();
       resetForm();
     } catch (error: any) {
       toast({
@@ -277,7 +352,7 @@ const AdminUsers = () => {
         description: `${user.full_name} ha sido eliminado.`,
       });
 
-      await loadUsers();
+      await loadUsersAndProperties();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -301,7 +376,7 @@ const AdminUsers = () => {
         description: `${user.full_name} ha sido ${user.is_active ? 'desactivado' : 'activado'}.`,
       });
 
-      await loadUsers();
+      await loadUsersAndProperties();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -444,6 +519,41 @@ const AdminUsers = () => {
                 )}
               </div>
 
+              {/* Property selector for portero/usuario */}
+              {formData.role !== 'admin' && (
+                <div className="mt-4">
+                  <Label className="flex items-center gap-2 mb-3">
+                    <MapPin className="w-4 h-4" />
+                    Propiedades Asignadas
+                  </Label>
+                  {properties.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No hay propiedades disponibles.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                      {properties.map((prop) => (
+                        <label
+                          key={prop.id}
+                          className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            selectedProperties.includes(prop.id)
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:bg-secondary/50'
+                          }`}
+                        >
+                          <Checkbox
+                            checked={selectedProperties.includes(prop.id)}
+                            onCheckedChange={() => togglePropertySelection(prop.id)}
+                          />
+                          <span className="text-sm">{prop.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {selectedProperties.length} propiedad{selectedProperties.length !== 1 ? 'es' : ''} seleccionada{selectedProperties.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
                 <Button type="submit" disabled={submitting}>
                   {submitting ? (
@@ -496,7 +606,7 @@ const AdminUsers = () => {
                     <div>
                       <h3 className="font-semibold text-lg">{user.full_name}</h3>
                       <p className="text-muted-foreground text-sm">{user.email}</p>
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
                         <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${getRoleColor(user.role)}`}>
                           {getRoleIcon(user.role)}
                           {getRoleLabel(user.role)}
@@ -505,6 +615,18 @@ const AdminUsers = () => {
                           {user.is_active ? 'Activo' : 'Inactivo'}
                         </span>
                       </div>
+                      {/* Show assigned properties for portero/usuario */}
+                      {user.role !== 'admin' && user.assignedProperties && user.assignedProperties.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1 mt-2">
+                          <MapPin className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            {user.assignedProperties
+                              .map((pid) => properties.find((p) => p.id === pid)?.name)
+                              .filter(Boolean)
+                              .join(', ') || `${user.assignedProperties.length} propiedad(es)`}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
