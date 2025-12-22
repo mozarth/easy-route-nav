@@ -31,10 +31,16 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/property/:slug" element={<PropertyPage />} />
             <Route path="/lote-finder/:etapa" element={<LoteFinder />} />
-            
+
+            {/* Public Routes (with language prefix) */}
+            <Route path="/:lang" element={<Index />} />
+            <Route path="/:lang/property/:slug" element={<PropertyPage />} />
+            <Route path="/:lang/lote-finder/:etapa" element={<LoteFinder />} />
+
             {/* Admin Login */}
             <Route path="/admin" element={<AdminLogin />} />
-            
+            <Route path="/:lang/admin" element={<AdminLogin />} />
+
             {/* Protected Admin Routes */}
             <Route element={<ProtectedRoute />}>
               {/* Inglés */}
@@ -53,8 +59,22 @@ const App = () => (
 
               {/* Ya estaba en español */}
               <Route path="/admin/qr-etapas" element={<AdminQRCodesEtapas />} />
+
+              {/* Todas las anteriores con prefijo de idioma */}
+              <Route path="/:lang/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/:lang/admin/properties" element={<AdminProperties />} />
+              <Route path="/:lang/admin/history" element={<AdminHistory />} />
+              <Route path="/:lang/admin/qr-codes" element={<AdminQRCodes />} />
+              <Route path="/:lang/admin/users" element={<AdminUsers />} />
+
+              <Route path="/:lang/admin/panel" element={<AdminDashboard />} />
+              <Route path="/:lang/admin/propiedades" element={<AdminProperties />} />
+              <Route path="/:lang/admin/historial" element={<AdminHistory />} />
+              <Route path="/:lang/admin/codigos-qr" element={<AdminQRCodes />} />
+              <Route path="/:lang/admin/usuarios" element={<AdminUsers />} />
+              <Route path="/:lang/admin/qr-etapas" element={<AdminQRCodesEtapas />} />
             </Route>
-            
+
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
