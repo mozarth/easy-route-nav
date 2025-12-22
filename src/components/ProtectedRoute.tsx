@@ -14,7 +14,10 @@ export const ProtectedRoute = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/admin" replace />;
+    const pathname = window.location.pathname;
+    const lang = pathname.match(/^\/([a-z]{2})(\/|$)/i)?.[1];
+    const loginPath = lang ? `/${lang}/admin` : '/admin';
+    return <Navigate to={loginPath} replace />;
   }
 
   return <Outlet />;
