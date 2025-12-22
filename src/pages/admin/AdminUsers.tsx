@@ -320,8 +320,19 @@ const AdminUsers = () => {
           },
         });
 
-        if (error || !data?.ok) {
-          const message = error?.message || data?.error || 'No se pudo crear el usuario';
+        if (error) {
+          const message = error.message || 'No se pudo crear el usuario';
+          toast({
+            title: 'Error',
+            description: message,
+            variant: 'destructive',
+          });
+          setSubmitting(false);
+          return;
+        }
+
+        if (!data?.ok) {
+          const message = data?.error || 'No se pudo crear el usuario';
           toast({
             title: 'Error',
             description: message,
