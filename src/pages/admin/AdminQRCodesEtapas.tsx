@@ -56,6 +56,21 @@ const AdminQRCodesEtapas = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generatedQR, setGeneratedQR] = useState<CustomQR | null>(null);
+
+  const normalizeBaseUrl = (url: string) => url.trim().replace(/\/+$/, '');
+  const [qrBaseUrl, setQrBaseUrl] = useState(() =>
+    normalizeBaseUrl(localStorage.getItem('qr_base_url') || window.location.origin)
+  );
+
+  const persistBaseUrl = () => {
+    const normalized = normalizeBaseUrl(qrBaseUrl);
+    setQrBaseUrl(normalized);
+    localStorage.setItem('qr_base_url', normalized);
+    toast({
+      title: 'URL de QR guardada',
+      description: `Los QR se generarán con: ${normalized}`,
+    });
+  };
   
   // Form state
   const [nombre, setNombre] = useState('');
@@ -69,16 +84,16 @@ const AdminQRCodesEtapas = () => {
 
   useEffect(() => {
     loadQRCodes();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrBaseUrl]);
 
   const loadQRCodes = async () => {
     setLoading(true);
     try {
-      const baseUrl = window.location.origin;
       const codes: EtapaQR[] = [];
 
       for (const etapa of etapas) {
-        const url = `${baseUrl}/lote-finder/${etapa}?property=${encodeURIComponent(propertyName)}`;
+        const url = `${qrBaseUrl}/lote-finder/${etapa}?property=${encodeURIComponent(propertyName)}`;
         const qrDataUrl = await generateQRCodeDataURL(url);
         codes.push({ etapa, qrDataUrl, url });
       }
@@ -120,9 +135,8 @@ const AdminQRCodesEtapas = () => {
 
     setGeneratingCustom(true);
     try {
-      const baseUrl = window.location.origin;
       // URL que lleva al buscador de lotes con los datos pre-cargados
-      const url = `${baseUrl}/lote-finder/${etapaSeleccionada}?property=${encodeURIComponent(nombre)}&lat=${lat}&lng=${lng}`;
+      const url = `${qrBaseUrl}/lote-finder/${etapaSeleccionada}?property=${encodeURIComponent(nombre)}&lat=${lat}&lng=${lng}`;
       const qrDataUrl = await generateQRCodeDataURL(url);
       
       setGeneratedQR({
@@ -345,6 +359,23 @@ const AdminQRCodesEtapas = () => {
             </div>
 
             <div className="flex gap-3 mb-6 flex-wrap">
+              <div className="w-full rounded-xl border border-border bg-card p-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="qrBaseUrl">Dominio (URL) para los QR</Label>
+                  <Input
+                    id="qrBaseUrl"
+                    value={qrBaseUrl}
+                    onChange={(e) => setQrBaseUrl(e.target.value)}
+                    onBlur={persistBaseUrl}
+                    placeholder="https://tu-dominio.com"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Usa el dominio <strong>publicado</strong>. Si generas QR desde la vista previa, al escanear puede
+                    llevarte a una página de Lovable.
+                  </p>
+                </div>
+              </div>
+
               <Button 
                 onClick={downloadAllPDF} 
                 disabled={loading || qrCodes.length === 0}
