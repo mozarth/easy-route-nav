@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, AlertCircle, ArrowLeft, Loader2, Navigation, Home, Search } from 'lucide-react';
+import { MapPin, AlertCircle, ArrowLeft, Loader2, Navigation, Home, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/Logo';
 import { getPropertyBySlug, logAccess, Property, getLotesByPropertyId, PropertyLote } from '@/lib/storage';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const PropertyPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -40,22 +46,12 @@ const PropertyPage = () => {
     loadProperty();
   }, [slug]);
 
-  const buscarLote = () => {
-    setError('');
-    
-    if (!numeroLote.trim()) {
-      setError('Por favor ingrese el número de lote/casa');
-      return;
-    }
-
-    const lote = lotes.find(
-      l => l.numero.toLowerCase() === numeroLote.trim().toLowerCase()
-    );
-
+  const handleLoteSelect = (loteId: string) => {
+    const lote = lotes.find(l => l.id === loteId);
     if (lote) {
+      setNumeroLote(lote.numero);
       setLoteEncontrado(lote);
-    } else {
-      setError(`No se encontró el lote/casa "${numeroLote}"`);
+      setError('');
     }
   };
 
@@ -154,41 +150,48 @@ const PropertyPage = () => {
             // Property has lotes - show lote finder
             <>
               {!loteEncontrado ? (
-                /* Search form */
+                /* Dropdown selector */
                 <div className="bg-card border border-border rounded-2xl p-6 shadow-lg">
                   <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                     <Home className="w-5 h-5 text-primary" />
-                    Ingrese su número de lote/casa
+                    Seleccione su lote/casa
                   </h2>
                   
                   <div className="space-y-4">
-                    <Input
-                      type="text"
-                      placeholder="Ej: 1, 2, A1, B2..."
-                      value={numeroLote}
-                      onChange={(e) => setNumeroLote(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && buscarLote()}
-                      className="text-center text-xl h-14"
-                    />
+                    <Select onValueChange={handleLoteSelect}>
+                      <SelectTrigger className="w-full h-14 text-lg">
+                        <SelectValue placeholder="Seleccione un lote/casa..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border border-border max-h-60">
+                        {lotes
+                          .sort((a, b) => {
+                            // Sort numerically if possible, otherwise alphabetically
+                            const numA = parseInt(a.numero);
+                            const numB = parseInt(b.numero);
+                            if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                            return a.numero.localeCompare(b.numero);
+                          })
+                          .map((lote) => (
+                            <SelectItem 
+                              key={lote.id} 
+                              value={lote.id}
+                              className="text-base py-3"
+                            >
+                              {lote.tipo === 'casa' ? '🏠 Casa' : '📍 Lote'} {lote.numero}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
                     
                     {error && (
                       <p className="text-destructive text-sm text-center">{error}</p>
                     )}
-                    
-                    <Button
-                      onClick={buscarLote}
-                      className="w-full h-12 text-lg"
-                      size="lg"
-                    >
-                      <Search className="w-5 h-5 mr-2" />
-                      Buscar
-                    </Button>
                   </div>
 
                   {/* Available lotes hint */}
                   <div className="mt-4 pt-4 border-t border-border">
                     <p className="text-muted-foreground text-xs text-center">
-                      Lotes/casas disponibles: {lotes.length}
+                      {lotes.length} lotes/casas disponibles
                     </p>
                   </div>
                 </div>
