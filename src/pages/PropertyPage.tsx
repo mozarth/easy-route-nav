@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, AlertCircle, ArrowLeft, Loader2, Navigation, Home, QrCode, Download } from 'lucide-react';
+import { MapPin, AlertCircle, ArrowLeft, Loader2, Navigation, Home, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/Logo';
 import { getPropertyBySlug, logAccess, Property, getLotesByPropertyId, PropertyLote } from '@/lib/storage';
 import {
@@ -50,13 +51,13 @@ const PropertyPage = () => {
   }, [slug]);
 
   const handleLoteSelect = async (loteId: string) => {
-    const lote = lotes.find(l => l.id === loteId);
+    const lote = lotes.find((l) => l.id === loteId);
     if (lote && property) {
       setNumeroLote(lote.numero);
       setLoteEncontrado(lote);
       setError('');
       setQrCodeUrl(null);
-      
+
       // Generate QR code with Google Maps route
       setGeneratingQR(true);
       const origen = `${property.latitude},${property.longitude}`;
@@ -66,6 +67,32 @@ const PropertyPage = () => {
       setQrCodeUrl(qrDataUrl);
       setGeneratingQR(false);
     }
+  };
+
+  const buscarLotePorNumero = async () => {
+    const value = numeroLote.trim();
+    setError('');
+
+    if (!value) {
+      setError('Por favor ingrese el número de lote/casa');
+      return;
+    }
+
+    if (value.length > 30) {
+      setError('Número de lote demasiado largo');
+      return;
+    }
+
+    const lote = lotes.find(
+      (l) => l.numero.trim().toLowerCase() === value.toLowerCase()
+    );
+
+    if (!lote) {
+      setError(`No se encontró el lote/casa ${value}`);
+      return;
+    }
+
+    await handleLoteSelect(lote.id);
   };
 
   const abrirGoogleMaps = () => {
@@ -146,21 +173,17 @@ const PropertyPage = () => {
         <div className="w-full max-w-lg">
           {/* Header */}
           <div className="text-center mb-4">
-            <h1 className="text-xl font-bold text-foreground">
-              {property.name}
-            </h1>
+            <h1 className="text-xl font-bold text-foreground">{property.name}</h1>
             {property.etapa && (
-              <p className="text-sm text-primary font-semibold">
-                {property.etapa}
-              </p>
+              <p className="text-sm text-primary font-semibold">{property.etapa}</p>
             )}
           </div>
 
           {/* Map Image */}
           {property.mapImageUrl && (
             <div className="mb-4 rounded-xl overflow-hidden border border-border shadow-lg">
-              <img 
-                src={property.mapImageUrl} 
+              <img
+                src={property.mapImageUrl}
                 alt={`Mapa de ${property.name}`}
                 className="w-full h-auto"
               />
@@ -176,13 +199,44 @@ const PropertyPage = () => {
             // Property has lotes - show lote finder
             <>
               {!loteEncontrado ? (
-                /* Dropdown selector */
                 <div className="bg-card border border-border rounded-2xl p-4 shadow-lg">
                   <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
                     <Home className="w-4 h-4 text-primary" />
-                    Seleccione su lote/casa
+                    Ingrese su número de lote/casa
                   </h2>
-                  
+
+                  <div className="space-y-3">
+                    <Input
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="Ej: 1, 2, 3..."
+                      value={numeroLote}
+                      onChange={(e) => {
+                        setNumeroLote(e.target.value);
+                        if (error) setError('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') buscarLotePorNumero();
+                      }}
+                      className="h-12 text-base"
+                      aria-label="Número de lote o casa"
+                    />
+
+                    {error && (
+                      <p className="text-destructive text-sm text-center">{error}</p>
+                    )}
+
+                    <Button onClick={buscarLotePorNumero} className="w-full" size="lg">
+                      Buscar
+                    </Button>
+                  </div>
+
+                  <div className="my-4 flex items-center gap-3">
+                    <div className="h-px flex-1 bg-border" />
+                    <p className="text-xs text-muted-foreground">o seleccione en la lista</p>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+
                   <Select onValueChange={handleLoteSelect}>
                     <SelectTrigger className="w-full h-12 text-base">
                       <SelectValue placeholder="Seleccione un lote/casa..." />
@@ -196,8 +250,8 @@ const PropertyPage = () => {
                           return a.numero.localeCompare(b.numero);
                         })
                         .map((lote) => (
-                          <SelectItem 
-                            key={lote.id} 
+                          <SelectItem
+                            key={lote.id}
                             value={lote.id}
                             className="text-base py-2"
                           >
@@ -231,9 +285,9 @@ const PropertyPage = () => {
                       </div>
                     ) : qrCodeUrl ? (
                       <div className="bg-white p-3 rounded-xl shadow-md">
-                        <img 
-                          src={qrCodeUrl} 
-                          alt="QR Code para ruta" 
+                        <img
+                          src={qrCodeUrl}
+                          alt="QR Code para ruta"
                           className="w-48 h-48"
                         />
                       </div>
@@ -251,16 +305,12 @@ const PropertyPage = () => {
                     </Button>
 
                     {qrCodeUrl && (
-                      <Button
-                        onClick={downloadQR}
-                        variant="outline"
-                        className="w-full"
-                      >
+                      <Button onClick={downloadQR} variant="outline" className="w-full">
                         <Download className="w-4 h-4 mr-2" />
                         Descargar QR
                       </Button>
                     )}
-                    
+
                     <Button
                       onClick={reiniciarBusqueda}
                       variant="ghost"
