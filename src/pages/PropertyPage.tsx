@@ -12,7 +12,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { generateQRCodeDataURL } from '@/lib/qr-generator';
-import colinasMap from '@/assets/colinas-map.jpg';
 
 const PropertyPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -158,10 +157,10 @@ const PropertyPage = () => {
           </div>
 
           {/* Map Image */}
-          {property.hasCustomMap && (
+          {property.mapImageUrl && (
             <div className="mb-4 rounded-xl overflow-hidden border border-border shadow-lg">
               <img 
-                src={colinasMap} 
+                src={property.mapImageUrl} 
                 alt={`Mapa de ${property.name}`}
                 className="w-full h-auto"
               />

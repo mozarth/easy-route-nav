@@ -33,6 +33,7 @@ import {
   deleteLote,
   PropertyLote,
   uploadLoteImage,
+  uploadPropertyMapImage,
 } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { AdminNav } from '@/components/admin/AdminNav';
@@ -53,7 +54,10 @@ const AdminProperties = () => {
     address: '',
     description: '',
     etapa: '',
+    mapImageUrl: '',
   });
+  const [uploadingMapImage, setUploadingMapImage] = useState(false);
+  const mapImageInputRef = useRef<HTMLInputElement | null>(null);
 
   // Lotes state
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -108,9 +112,11 @@ const AdminProperties = () => {
       address: '',
       description: '',
       etapa: '',
+      mapImageUrl: '',
     });
     setEditingProperty(null);
     setShowForm(false);
+    if (mapImageInputRef.current) mapImageInputRef.current.value = '';
   };
 
   const handleEdit = (property: Property) => {
@@ -123,8 +129,10 @@ const AdminProperties = () => {
       address: property.address || '',
       description: property.description || '',
       etapa: property.etapa || '',
+      mapImageUrl: property.mapImageUrl || '',
     });
     setShowForm(true);
+    if (mapImageInputRef.current) mapImageInputRef.current.value = '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,6 +149,8 @@ const AdminProperties = () => {
       description: formData.description || undefined,
       etapa: formData.etapa || undefined,
       isActive: editingProperty?.isActive ?? true,
+      hasCustomMap: !!formData.mapImageUrl,
+      mapImageUrl: formData.mapImageUrl || undefined,
     };
 
     const result = await saveProperty(propertyData);
@@ -197,6 +207,35 @@ const AdminProperties = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  // Handle property map image upload
+  const handleMapImageUpload = async (file?: File) => {
+    if (!file) return;
+
+    setUploadingMapImage(true);
+    // Use a temp ID if creating new property
+    const tempId = editingProperty?.id ?? crypto.randomUUID();
+    const publicUrl = await uploadPropertyMapImage({
+      propertyId: tempId,
+      file,
+    });
+    setUploadingMapImage(false);
+
+    if (!publicUrl) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo subir la imagen del mapa.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setFormData(prev => ({ ...prev, mapImageUrl: publicUrl }));
+    toast({
+      title: 'Imagen cargada',
+      description: 'La imagen del mapa se guardará al guardar la propiedad.',
+    });
   };
 
   // Lotes handlers
@@ -428,6 +467,53 @@ const AdminProperties = () => {
                   placeholder="Descripción de la propiedad..."
                   rows={3}
                 />
+              </div>
+
+              {/* Map Image Upload */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Imagen del Mapa (opcional)</label>
+                <div className="flex flex-wrap items-center gap-3">
+                  <input
+                    ref={mapImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleMapImageUpload(e.target.files?.[0])}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => mapImageInputRef.current?.click()}
+                    disabled={uploadingMapImage}
+                  >
+                    {uploadingMapImage ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Upload className="w-4 h-4" />
+                    )}
+                    Subir imagen de mapa
+                  </Button>
+                  {formData.mapImageUrl && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setFormData(prev => ({ ...prev, mapImageUrl: '' }))}
+                    >
+                      Quitar
+                    </Button>
+                  )}
+                </div>
+                {formData.mapImageUrl && (
+                  <div className="mt-3 rounded-lg border border-border overflow-hidden max-w-sm">
+                    <img
+                      src={formData.mapImageUrl}
+                      alt="Vista previa del mapa"
+                      className="w-full h-40 object-cover"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3 pt-2">

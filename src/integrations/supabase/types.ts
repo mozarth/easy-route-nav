@@ -93,6 +93,7 @@ export type Database = {
           is_active: boolean
           latitude: number
           longitude: number
+          map_image_url: string | null
           name: string
           slug: string
           updated_at: string
@@ -107,6 +108,7 @@ export type Database = {
           is_active?: boolean
           latitude: number
           longitude: number
+          map_image_url?: string | null
           name: string
           slug: string
           updated_at?: string
@@ -121,6 +123,7 @@ export type Database = {
           is_active?: boolean
           latitude?: number
           longitude?: number
+          map_image_url?: string | null
           name?: string
           slug?: string
           updated_at?: string

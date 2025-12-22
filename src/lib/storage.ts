@@ -12,6 +12,7 @@ export interface Property {
   etapa?: string | null;
   isActive: boolean;
   hasCustomMap?: boolean;
+  mapImageUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +50,7 @@ const transformProperty = (row: any): Property => ({
   etapa: row.etapa,
   isActive: row.is_active,
   hasCustomMap: row.has_custom_map,
+  mapImageUrl: row.map_image_url,
   createdAt: new Date(row.created_at),
   updatedAt: new Date(row.updated_at),
 });
@@ -138,6 +140,7 @@ export const saveProperty = async (property: Partial<Property> & { name: string;
     etapa: property.etapa || null,
     is_active: property.isActive ?? true,
     has_custom_map: property.hasCustomMap ?? false,
+    map_image_url: property.mapImageUrl ?? null,
   };
 
   if (property.id) {
@@ -389,6 +392,36 @@ export const uploadLoteImage = async (args: {
     return data.publicUrl;
   } catch (e) {
     console.error('Error uploading lote image:', e);
+    return null;
+  }
+};
+
+// Upload property map image
+export const uploadPropertyMapImage = async (args: {
+  propertyId: string;
+  file: File;
+}): Promise<string | null> => {
+  try {
+    const extRaw = args.file.name.split('.').pop()?.toLowerCase();
+    const ext = extRaw && /^[a-z0-9]+$/.test(extRaw) ? extRaw : 'jpg';
+    const objectName = `maps/${args.propertyId}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('lote-images')
+      .upload(objectName, args.file, {
+        upsert: true,
+        contentType: args.file.type || undefined,
+      });
+
+    if (uploadError) {
+      console.error('Error uploading property map image:', uploadError);
+      return null;
+    }
+
+    const { data } = supabase.storage.from('lote-images').getPublicUrl(objectName);
+    return data.publicUrl;
+  } catch (e) {
+    console.error('Error uploading property map image:', e);
     return null;
   }
 };

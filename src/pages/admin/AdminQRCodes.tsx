@@ -7,7 +7,8 @@ import {
   Image,
   QrCode,
   LogOut,
-  Loader2
+  Loader2,
+  Navigation,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
@@ -91,23 +92,31 @@ const AdminQRCodes = () => {
             <h1 className="text-2xl font-bold">Códigos QR</h1>
             <p className="text-muted-foreground">Genera y descarga códigos QR para cada propiedad</p>
           </div>
-          <Button 
-            variant="navigation" 
-            onClick={handleDownloadAll}
-            disabled={downloadingAll || properties.length === 0}
-          >
-            {downloadingAll ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Generando...
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                Descargar Todos (PDF)
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Link to="/admin/generar-qr">
+              <Button variant="default">
+                <Navigation className="w-4 h-4" />
+                Generar QR de Ruta
+              </Button>
+            </Link>
+            <Button 
+              variant="outline" 
+              onClick={handleDownloadAll}
+              disabled={downloadingAll || properties.length === 0}
+            >
+              {downloadingAll ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Descargar Todos (PDF)
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Loading */}
