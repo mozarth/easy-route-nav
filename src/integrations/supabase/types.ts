@@ -127,6 +127,47 @@ export type Database = {
         }
         Relationships: []
       }
+      property_lotes: {
+        Row: {
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          numero: string
+          property_id: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          numero: string
+          property_id: string
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          numero?: string
+          property_id?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_lotes_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_property_access: {
         Row: {
           created_at: string
