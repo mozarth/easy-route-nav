@@ -1,26 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  MapPin,
+import { 
+  MapPin, 
   Download,
   FileText,
   Image,
   QrCode,
   LogOut,
-  Loader2,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { getProperties, Property } from '@/lib/storage';
-import {
-  generateQRCodeDataURL,
-  downloadQRCodePNG,
-  downloadQRCodePDF,
-  downloadAllQRCodesPDF,
-} from '@/lib/qr-generator';
+import { generateQRCodeDataURL, downloadQRCodePNG, downloadQRCodePDF, downloadAllQRCodesPDF } from '@/lib/qr-generator';
 import { useToast } from '@/hooks/use-toast';
 import { AdminNav } from '@/components/admin/AdminNav';
 
@@ -32,36 +25,20 @@ const AdminQRCodes = () => {
   const [loading, setLoading] = useState(true);
   const [downloadingAll, setDownloadingAll] = useState(false);
 
-  const normalizeBaseUrl = (url: string) => url.trim().replace(/\/+$/, '');
-  const [qrBaseUrl, setQrBaseUrl] = useState(() =>
-    normalizeBaseUrl(localStorage.getItem('qr_base_url') || window.location.origin)
-  );
+  const baseUrl = window.location.origin;
 
   useEffect(() => {
     loadQRCodes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qrBaseUrl]);
-
-  const persistBaseUrl = () => {
-    const normalized = normalizeBaseUrl(qrBaseUrl);
-    setQrBaseUrl(normalized);
-    localStorage.setItem('qr_base_url', normalized);
-    toast({
-      title: 'URL de QR guardada',
-      description: `Los QR se generarán con: ${normalized}`,
-    });
-  };
+  }, []);
 
   const loadQRCodes = async () => {
-    setLoading(true);
-
     const props = await getProperties();
     const activeProps = props.filter((p: Property) => p.isActive);
     setProperties(activeProps);
 
     const codes: { [key: string]: string } = {};
     for (const prop of activeProps) {
-      const url = `${qrBaseUrl}/property/${prop.slug}`;
+      const url = `${baseUrl}/property/${prop.slug}`;
       codes[prop.id] = await generateQRCodeDataURL(url);
     }
     setQrCodes(codes);
@@ -69,7 +46,7 @@ const AdminQRCodes = () => {
   };
 
   const handleDownloadPNG = async (property: Property) => {
-    await downloadQRCodePNG(property as any, qrBaseUrl);
+    await downloadQRCodePNG(property as any, baseUrl);
     toast({
       title: 'Descarga exitosa',
       description: `QR de ${property.name} descargado como PNG.`,
@@ -77,7 +54,7 @@ const AdminQRCodes = () => {
   };
 
   const handleDownloadPDF = async (property: Property) => {
-    await downloadQRCodePDF(property as any, qrBaseUrl);
+    await downloadQRCodePDF(property as any, baseUrl);
     toast({
       title: 'Descarga exitosa',
       description: `QR de ${property.name} descargado como PDF.`,
@@ -86,7 +63,7 @@ const AdminQRCodes = () => {
 
   const handleDownloadAll = async () => {
     setDownloadingAll(true);
-    await downloadAllQRCodesPDF(properties as any[], qrBaseUrl);
+    await downloadAllQRCodesPDF(properties as any[], baseUrl);
     toast({
       title: 'Descarga exitosa',
       description: 'Todos los códigos QR han sido descargados en un PDF.',
@@ -109,13 +86,13 @@ const AdminQRCodes = () => {
         </div>
 
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold">Códigos QR</h1>
             <p className="text-muted-foreground">Genera y descarga códigos QR para cada propiedad</p>
           </div>
-          <Button
-            variant="navigation"
+          <Button 
+            variant="navigation" 
             onClick={handleDownloadAll}
             disabled={downloadingAll || properties.length === 0}
           >
@@ -132,24 +109,6 @@ const AdminQRCodes = () => {
             )}
           </Button>
         </div>
-
-        {/* QR Base URL */}
-        <section className="mb-8 rounded-xl border border-border bg-card p-4">
-          <div className="grid gap-2">
-            <Label htmlFor="qrBaseUrl">Dominio (URL) para los QR</Label>
-            <Input
-              id="qrBaseUrl"
-              value={qrBaseUrl}
-              onChange={(e) => setQrBaseUrl(e.target.value)}
-              onBlur={persistBaseUrl}
-              placeholder="https://tu-dominio.com"
-            />
-            <p className="text-xs text-muted-foreground">
-              Importante: usa aquí el dominio <strong>publicado</strong>. Si generas QR desde la vista previa, al escanear
-              puede llevarte a una página de Lovable en vez de tu app.
-            </p>
-          </div>
-        </section>
 
         {/* Loading */}
         {loading && (
