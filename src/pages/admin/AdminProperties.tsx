@@ -10,13 +10,27 @@ import {
   Save,
   X,
   Loader2,
+  Home,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProperties, saveProperty, deleteProperty, togglePropertyActive, Property } from '@/lib/storage';
+import { 
+  getProperties, 
+  saveProperty, 
+  deleteProperty, 
+  togglePropertyActive, 
+  Property,
+  getLotesByPropertyId,
+  saveLote,
+  deleteLote,
+  PropertyLote,
+} from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { AdminNav } from '@/components/admin/AdminNav';
 
@@ -37,6 +51,18 @@ const AdminProperties = () => {
     description: '',
     etapa: '',
   });
+
+  // Lotes state
+  const [expandedProperty, setExpandedProperty] = useState<string | null>(null);
+  const [propertyLotes, setPropertyLotes] = useState<Record<string, PropertyLote[]>>({});
+  const [showLoteForm, setShowLoteForm] = useState<string | null>(null);
+  const [loteFormData, setLoteFormData] = useState({
+    numero: '',
+    tipo: 'lote' as 'lote' | 'casa',
+    latitude: '',
+    longitude: '',
+  });
+  const [savingLote, setSavingLote] = useState(false);
 
   const loadProperties = async () => {
     setLoading(true);
@@ -163,6 +189,75 @@ const AdminProperties = () => {
         description: 'No se pudo cambiar el estado de la propiedad.',
         variant: 'destructive',
       });
+    }
+  };
+
+  // Lotes handlers
+  const togglePropertyExpand = async (propertyId: string) => {
+    if (expandedProperty === propertyId) {
+      setExpandedProperty(null);
+      setShowLoteForm(null);
+    } else {
+      setExpandedProperty(propertyId);
+      // Load lotes if not already loaded
+      if (!propertyLotes[propertyId]) {
+        const lotes = await getLotesByPropertyId(propertyId);
+        setPropertyLotes(prev => ({ ...prev, [propertyId]: lotes }));
+      }
+    }
+  };
+
+  const resetLoteForm = () => {
+    setLoteFormData({
+      numero: '',
+      tipo: 'lote',
+      latitude: '',
+      longitude: '',
+    });
+    setShowLoteForm(null);
+  };
+
+  const handleAddLote = async (propertyId: string) => {
+    setSavingLote(true);
+    
+    const result = await saveLote({
+      propertyId,
+      numero: loteFormData.numero,
+      tipo: loteFormData.tipo,
+      latitude: parseFloat(loteFormData.latitude),
+      longitude: parseFloat(loteFormData.longitude),
+    });
+
+    setSavingLote(false);
+
+    if (result) {
+      const lotes = await getLotesByPropertyId(propertyId);
+      setPropertyLotes(prev => ({ ...prev, [propertyId]: lotes }));
+      resetLoteForm();
+      toast({
+        title: 'Lote agregado',
+        description: `${loteFormData.tipo === 'casa' ? 'Casa' : 'Lote'} #${loteFormData.numero} agregado exitosamente.`,
+      });
+    } else {
+      toast({
+        title: 'Error',
+        description: 'No se pudo agregar el lote. Verifica que no exista ya.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteLote = async (lote: PropertyLote, propertyId: string) => {
+    if (confirm(`¿Eliminar ${lote.tipo === 'casa' ? 'Casa' : 'Lote'} #${lote.numero}?`)) {
+      const success = await deleteLote(lote.id);
+      if (success) {
+        const lotes = await getLotesByPropertyId(propertyId);
+        setPropertyLotes(prev => ({ ...prev, [propertyId]: lotes }));
+        toast({
+          title: 'Lote eliminado',
+          description: `${lote.tipo === 'casa' ? 'Casa' : 'Lote'} #${lote.numero} eliminado.`,
+        });
+      }
     }
   };
 
@@ -317,6 +412,20 @@ const AdminProperties = () => {
 
                   <div className="flex items-center gap-2">
                     <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => togglePropertyExpand(property.id)}
+                      title="Ver lotes/casas"
+                    >
+                      <Home className="w-4 h-4" />
+                      Lotes
+                      {expandedProperty === property.id ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button 
                       variant="ghost" 
                       size="icon"
                       onClick={() => handleToggleActive(property)}
@@ -344,6 +453,124 @@ const AdminProperties = () => {
                     </Button>
                   </div>
                 </div>
+
+                {/* Expanded Lotes Section */}
+                {expandedProperty === property.id && (
+                  <div className="mt-6 pt-6 border-t border-border animate-fade-in">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        <Home className="w-4 h-4" />
+                        Lotes y Casas
+                      </h4>
+                      <Button 
+                        size="sm"
+                        onClick={() => setShowLoteForm(showLoteForm === property.id ? null : property.id)}
+                      >
+                        <Plus className="w-4 h-4" />
+                        Agregar Lote/Casa
+                      </Button>
+                    </div>
+
+                    {/* Add Lote Form */}
+                    {showLoteForm === property.id && (
+                      <div className="bg-secondary/50 rounded-lg p-4 mb-4 animate-fade-in">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">Tipo</label>
+                            <Select 
+                              value={loteFormData.tipo} 
+                              onValueChange={(v) => setLoteFormData(prev => ({ ...prev, tipo: v as 'lote' | 'casa' }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="lote">Lote</SelectItem>
+                                <SelectItem value="casa">Casa</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">Número *</label>
+                            <Input
+                              value={loteFormData.numero}
+                              onChange={(e) => setLoteFormData(prev => ({ ...prev, numero: e.target.value }))}
+                              placeholder="Ej: 1, 2, 3..."
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">Latitud *</label>
+                            <Input
+                              type="number"
+                              step="any"
+                              value={loteFormData.latitude}
+                              onChange={(e) => setLoteFormData(prev => ({ ...prev, latitude: e.target.value }))}
+                              placeholder="6.1059"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">Longitud *</label>
+                            <Input
+                              type="number"
+                              step="any"
+                              value={loteFormData.longitude}
+                              onChange={(e) => setLoteFormData(prev => ({ ...prev, longitude: e.target.value }))}
+                              placeholder="-75.4885"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-3">
+                          <Button 
+                            size="sm"
+                            onClick={() => handleAddLote(property.id)}
+                            disabled={savingLote || !loteFormData.numero || !loteFormData.latitude || !loteFormData.longitude}
+                          >
+                            {savingLote ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            Guardar
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={resetLoteForm}>
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Lotes List */}
+                    {propertyLotes[property.id]?.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {propertyLotes[property.id].map((lote) => (
+                          <div 
+                            key={lote.id}
+                            className="bg-secondary/30 rounded-lg p-3 flex items-center justify-between"
+                          >
+                            <div>
+                              <p className="font-medium">
+                                {lote.tipo === 'casa' ? 'Casa' : 'Lote'} #{lote.numero}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {lote.latitude.toFixed(4)}, {lote.longitude.toFixed(4)}
+                              </p>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleDeleteLote(lote, property.id)}
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No hay lotes o casas registradas en esta propiedad.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
 

@@ -16,6 +16,17 @@ export interface Property {
   updatedAt: Date;
 }
 
+export interface PropertyLote {
+  id: string;
+  propertyId: string;
+  numero: string;
+  tipo: 'lote' | 'casa';
+  latitude: number;
+  longitude: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface AccessLog {
   id: string;
   propertyId: string;
@@ -49,6 +60,18 @@ const transformAccessLog = (row: any): AccessLog => ({
   accessedAt: new Date(row.accessed_at),
   deviceType: row.device_type as 'mobile' | 'tablet' | 'desktop',
   userAgent: row.user_agent,
+});
+
+// Transform Supabase row to PropertyLote
+const transformPropertyLote = (row: any): PropertyLote => ({
+  id: row.id,
+  propertyId: row.property_id,
+  numero: row.numero,
+  tipo: row.tipo as 'lote' | 'casa',
+  latitude: row.latitude,
+  longitude: row.longitude,
+  createdAt: new Date(row.created_at),
+  updatedAt: new Date(row.updated_at),
 });
 
 // ============ PROPERTIES ============
@@ -248,6 +271,81 @@ export const clearAccessLogs = async (): Promise<boolean> => {
 
   if (error) {
     console.error('Error clearing access logs:', error);
+    return false;
+  }
+
+  return true;
+};
+
+// ============ PROPERTY LOTES ============
+
+// Get lotes by property ID
+export const getLotesByPropertyId = async (propertyId: string): Promise<PropertyLote[]> => {
+  const { data, error } = await supabase
+    .from('property_lotes')
+    .select('*')
+    .eq('property_id', propertyId)
+    .order('numero', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching lotes:', error);
+    return [];
+  }
+
+  return (data || []).map(transformPropertyLote);
+};
+
+// Save lote (insert or update)
+export const saveLote = async (lote: Partial<PropertyLote> & { propertyId: string; numero: string; tipo: 'lote' | 'casa'; latitude: number; longitude: number }): Promise<PropertyLote | null> => {
+  const payload = {
+    property_id: lote.propertyId,
+    numero: lote.numero,
+    tipo: lote.tipo,
+    latitude: lote.latitude,
+    longitude: lote.longitude,
+  };
+
+  if (lote.id) {
+    // Update
+    const { data, error } = await supabase
+      .from('property_lotes')
+      .update(payload)
+      .eq('id', lote.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating lote:', error);
+      return null;
+    }
+
+    return transformPropertyLote(data);
+  } else {
+    // Insert
+    const { data, error } = await supabase
+      .from('property_lotes')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error inserting lote:', error);
+      return null;
+    }
+
+    return transformPropertyLote(data);
+  }
+};
+
+// Delete lote
+export const deleteLote = async (id: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('property_lotes')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting lote:', error);
     return false;
   }
 
