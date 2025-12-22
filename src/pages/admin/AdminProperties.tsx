@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { 
   MapPin, 
   Plus,
@@ -13,6 +13,8 @@ import {
   Home,
   ChevronDown,
   ChevronUp,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +32,7 @@ import {
   saveLote,
   deleteLote,
   PropertyLote,
+  uploadLoteImage,
 } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { AdminNav } from '@/components/admin/AdminNav';
@@ -53,16 +56,20 @@ const AdminProperties = () => {
   });
 
   // Lotes state
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [expandedProperty, setExpandedProperty] = useState<string | null>(null);
   const [propertyLotes, setPropertyLotes] = useState<Record<string, PropertyLote[]>>({});
   const [showLoteForm, setShowLoteForm] = useState<string | null>(null);
+  const [editingLote, setEditingLote] = useState<PropertyLote | null>(null);
   const [loteFormData, setLoteFormData] = useState({
     numero: '',
     tipo: 'lote' as 'lote' | 'casa',
     latitude: '',
     longitude: '',
+    imageUrl: '',
   });
   const [savingLote, setSavingLote] = useState(false);
+  const [uploadingLoteImage, setUploadingLoteImage] = useState(false);
 
   const loadProperties = async () => {
     setLoading(true);
@@ -196,36 +203,69 @@ const AdminProperties = () => {
   const togglePropertyExpand = async (propertyId: string) => {
     if (expandedProperty === propertyId) {
       setExpandedProperty(null);
-      setShowLoteForm(null);
-    } else {
-      setExpandedProperty(propertyId);
-      // Load lotes if not already loaded
-      if (!propertyLotes[propertyId]) {
-        const lotes = await getLotesByPropertyId(propertyId);
-        setPropertyLotes(prev => ({ ...prev, [propertyId]: lotes }));
-      }
+      resetLoteForm();
+      return;
+    }
+
+    setExpandedProperty(propertyId);
+
+    // Load lotes if not already loaded
+    if (!propertyLotes[propertyId]) {
+      const lotes = await getLotesByPropertyId(propertyId);
+      setPropertyLotes(prev => ({ ...prev, [propertyId]: lotes }));
     }
   };
 
   const resetLoteForm = () => {
+    setEditingLote(null);
     setLoteFormData({
       numero: '',
       tipo: 'lote',
       latitude: '',
       longitude: '',
+      imageUrl: '',
     });
     setShowLoteForm(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleAddLote = async (propertyId: string) => {
+  const openNewLoteForm = (propertyId: string) => {
+    setEditingLote(null);
+    setLoteFormData({
+      numero: '',
+      tipo: 'lote',
+      latitude: '',
+      longitude: '',
+      imageUrl: '',
+    });
+    setShowLoteForm(propertyId);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleEditLote = (lote: PropertyLote, propertyId: string) => {
+    setEditingLote(lote);
+    setShowLoteForm(propertyId);
+    setLoteFormData({
+      numero: lote.numero,
+      tipo: lote.tipo,
+      latitude: lote.latitude.toString(),
+      longitude: lote.longitude.toString(),
+      imageUrl: lote.imageUrl || '',
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleSaveLote = async (propertyId: string) => {
     setSavingLote(true);
-    
+
     const result = await saveLote({
+      id: editingLote?.id,
       propertyId,
       numero: loteFormData.numero,
       tipo: loteFormData.tipo,
       latitude: parseFloat(loteFormData.latitude),
       longitude: parseFloat(loteFormData.longitude),
+      imageUrl: loteFormData.imageUrl || null,
     });
 
     setSavingLote(false);
@@ -235,16 +275,45 @@ const AdminProperties = () => {
       setPropertyLotes(prev => ({ ...prev, [propertyId]: lotes }));
       resetLoteForm();
       toast({
-        title: 'Lote agregado',
-        description: `${loteFormData.tipo === 'casa' ? 'Casa' : 'Lote'} #${loteFormData.numero} agregado exitosamente.`,
+        title: editingLote ? 'Lote actualizado' : 'Lote agregado',
+        description: `${loteFormData.tipo === 'casa' ? 'Casa' : 'Lote'} #${loteFormData.numero} ${editingLote ? 'actualizado' : 'agregado'} exitosamente.`,
       });
     } else {
       toast({
         title: 'Error',
-        description: 'No se pudo agregar el lote. Verifica que no exista ya.',
+        description: editingLote
+          ? 'No se pudo actualizar el lote. Verifica tus permisos.'
+          : 'No se pudo agregar el lote. Verifica que no exista ya.',
         variant: 'destructive',
       });
     }
+  };
+
+  const handleLoteImageUpload = async (propertyId: string, file?: File) => {
+    if (!file) return;
+
+    setUploadingLoteImage(true);
+    const publicUrl = await uploadLoteImage({
+      propertyId,
+      loteId: editingLote?.id,
+      file,
+    });
+    setUploadingLoteImage(false);
+
+    if (!publicUrl) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo subir la imagen. Verifica tus permisos.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoteFormData(prev => ({ ...prev, imageUrl: publicUrl }));
+    toast({
+      title: 'Imagen cargada',
+      description: 'La imagen quedó lista; pulsa Guardar para aplicar el cambio.',
+    });
   };
 
   const handleDeleteLote = async (lote: PropertyLote, propertyId: string) => {
@@ -464,22 +533,32 @@ const AdminProperties = () => {
                       </h4>
                       <Button 
                         size="sm"
-                        onClick={() => setShowLoteForm(showLoteForm === property.id ? null : property.id)}
+                        onClick={() => (showLoteForm === property.id ? resetLoteForm() : openNewLoteForm(property.id))}
                       >
                         <Plus className="w-4 h-4" />
-                        Agregar Lote/Casa
+                        {showLoteForm === property.id ? 'Cerrar' : 'Agregar Lote/Casa'}
                       </Button>
                     </div>
 
-                    {/* Add Lote Form */}
+                    {/* Add/Edit Lote Form */}
                     {showLoteForm === property.id && (
                       <div className="bg-secondary/50 rounded-lg p-4 mb-4 animate-fade-in">
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <p className="text-sm font-medium">
+                            {editingLote
+                              ? `${editingLote.tipo === 'casa' ? 'Editar Casa' : 'Editar Lote'} #${editingLote.numero}`
+                              : 'Nuevo Lote/Casa'}
+                          </p>
+                        </div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                           <div>
                             <label className="text-sm font-medium mb-1 block">Tipo</label>
-                            <Select 
-                              value={loteFormData.tipo} 
-                              onValueChange={(v) => setLoteFormData(prev => ({ ...prev, tipo: v as 'lote' | 'casa' }))}
+                            <Select
+                              value={loteFormData.tipo}
+                              onValueChange={(v) =>
+                                setLoteFormData(prev => ({ ...prev, tipo: v as 'lote' | 'casa' }))
+                              }
                             >
                               <SelectTrigger>
                                 <SelectValue />
@@ -522,14 +601,81 @@ const AdminProperties = () => {
                             />
                           </div>
                         </div>
-                        <div className="flex gap-2 mt-3">
-                          <Button 
+
+                        <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
+                          <div className="lg:col-span-2">
+                            <label className="text-sm font-medium mb-1 block">Imagen (opcional)</label>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => handleLoteImageUpload(property.id, e.target.files?.[0])}
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploadingLoteImage}
+                              >
+                                {uploadingLoteImage ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Upload className="w-4 h-4" />
+                                )}
+                                Subir imagen
+                              </Button>
+                              {loteFormData.imageUrl ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setLoteFormData(prev => ({ ...prev, imageUrl: '' }))}
+                                >
+                                  Quitar
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          <div className="lg:col-span-1">
+                            {loteFormData.imageUrl ? (
+                              <div className="rounded-md border border-border overflow-hidden bg-background">
+                                <img
+                                  src={loteFormData.imageUrl}
+                                  alt={`Imagen de ${loteFormData.tipo} ${loteFormData.numero}`}
+                                  className="w-full h-28 object-cover"
+                                  loading="lazy"
+                                />
+                              </div>
+                            ) : (
+                              <div className="rounded-md border border-dashed border-border p-4 text-xs text-muted-foreground flex items-center gap-2">
+                                <ImageIcon className="w-4 h-4" />
+                                Sin imagen
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 mt-4">
+                          <Button
                             size="sm"
-                            onClick={() => handleAddLote(property.id)}
-                            disabled={savingLote || !loteFormData.numero || !loteFormData.latitude || !loteFormData.longitude}
+                            onClick={() => handleSaveLote(property.id)}
+                            disabled={
+                              savingLote ||
+                              !loteFormData.numero ||
+                              !loteFormData.latitude ||
+                              !loteFormData.longitude
+                            }
                           >
-                            {savingLote ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                            Guardar
+                            {savingLote ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                            {editingLote ? 'Actualizar' : 'Guardar'}
                           </Button>
                           <Button size="sm" variant="outline" onClick={resetLoteForm}>
                             Cancelar
@@ -542,25 +688,42 @@ const AdminProperties = () => {
                     {propertyLotes[property.id]?.length > 0 ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {propertyLotes[property.id].map((lote) => (
-                          <div 
+                          <div
                             key={lote.id}
-                            className="bg-secondary/30 rounded-lg p-3 flex items-center justify-between"
+                            className="bg-secondary/30 rounded-lg p-3 flex items-center justify-between gap-3"
                           >
-                            <div>
-                              <p className="font-medium">
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">
                                 {lote.tipo === 'casa' ? 'Casa' : 'Lote'} #{lote.numero}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {lote.latitude.toFixed(4)}, {lote.longitude.toFixed(4)}
                               </p>
+                              {lote.imageUrl ? (
+                                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                                  <ImageIcon className="w-3.5 h-3.5" />
+                                  Con imagen
+                                </p>
+                              ) : null}
                             </div>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => handleDeleteLote(lote, property.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditLote(lote, property.id)}
+                                title="Editar"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteLote(lote, property.id)}
+                                title="Eliminar"
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
