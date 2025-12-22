@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,13 +23,18 @@ const AdminLogin = () => {
   const [formError, setFormError] = useState('');
   const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  const langPrefix = location.pathname.match(/^\/([a-z]{2})(\/|$)/i)?.[1]
+    ? `/${location.pathname.match(/^\/([a-z]{2})(\/|$)/i)![1]}`
+    : '';
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      navigate('/admin/panel');
+      navigate(`${langPrefix}/admin/panel`);
     }
-  }, [isAuthenticated, authLoading, navigate]);
+  }, [isAuthenticated, authLoading, navigate, langPrefix]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +69,7 @@ const AdminLogin = () => {
         title: 'Bienvenido',
         description: 'Has iniciado sesión correctamente',
       });
-      navigate('/admin/panel');
+      navigate(`${langPrefix}/admin/panel`);
     }
 
     setIsLoading(false);

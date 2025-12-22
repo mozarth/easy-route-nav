@@ -29,17 +29,25 @@ Deno.serve(async (req) => {
     })
 
     if (createError) {
-      // If user already exists, update their profile to admin
+      // If user already exists, ensure they have admin role
       if (createError.message.includes('already been registered')) {
-        const { data: existingUser } = await supabaseAdmin
+        const { data: existingProfile, error: profileError } = await supabaseAdmin
           .from('profiles')
-          .update({ role: 'admin', is_active: true })
+          .select('user_id')
           .eq('email', 'administracion@salenza.com')
-          .select()
-          .single()
+          .maybeSingle()
+
+        if (profileError) {
+          throw profileError
+        }
+
+        if (existingProfile?.user_id) {
+          await supabaseAdmin.from('user_roles').delete().eq('user_id', existingProfile.user_id)
+          await supabaseAdmin.from('user_roles').insert({ user_id: existingProfile.user_id, role: 'admin' })
+        }
 
         return new Response(
-          JSON.stringify({ message: 'Usuario existente actualizado a admin', user: existingUser }),
+          JSON.stringify({ message: 'Usuario existente asegurado como admin' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }

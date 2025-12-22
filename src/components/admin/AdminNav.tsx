@@ -32,8 +32,12 @@ export const AdminNav = () => {
   const { logout } = useAuth();
   const location = useLocation();
 
+  const langPrefix = location.pathname.match(/^\/([a-z]{2})(\/|$)/i)?.[1]
+    ? `/${location.pathname.match(/^\/([a-z]{2})(\/|$)/i)![1]}`
+    : '';
+
   const isActive = (item: NavItem) => {
-    const paths = [item.to, ...(item.aliases ?? [])];
+    const paths = [item.to, ...(item.aliases ?? [])].flatMap((p) => [p, `${langPrefix}${p}`]);
     return paths.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`));
   };
 
@@ -49,7 +53,7 @@ export const AdminNav = () => {
           {navItems.map((item) => (
             <Link
               key={item.to}
-              to={item.to}
+              to={`${langPrefix}${item.to}`}
               className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
                 isActive(item)
@@ -87,7 +91,7 @@ export const AdminNav = () => {
         {navItems.map((item) => (
           <Link
             key={item.to}
-            to={item.to}
+            to={`${langPrefix}${item.to}`}
             className={cn(
               'flex flex-col items-center gap-1 p-2',
               isActive(item) ? 'text-primary' : 'text-muted-foreground'

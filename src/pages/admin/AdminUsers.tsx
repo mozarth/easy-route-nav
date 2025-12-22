@@ -34,6 +34,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { AdminNav } from '@/components/admin/AdminNav';
+import { getProperties as getLocalProperties } from '@/lib/storage';
 
 type UserRole = 'admin' | 'portero' | 'usuario';
 
@@ -61,7 +62,7 @@ const userSchema = z.object({
 });
 
 const AdminUsers = () => {
-  const { logout, isAdmin, isLoading: authLoading, signup, profile } = useAuth();
+  const { logout, isAdmin, isLoading: authLoading, profile } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [properties, setProperties] = useState<PropertyOption[]>([]);
@@ -98,14 +99,49 @@ const AdminUsers = () => {
   const loadUsersAndProperties = async () => {
     setLoading(true);
     try {
-      // Get properties
+      // Get properties (DB)
       const { data: propsData, error: propsError } = await supabase
         .from('properties')
         .select('id, name')
         .order('name');
 
       if (propsError) throw propsError;
-      setProperties(propsData || []);
+
+      // If DB is empty, seed from localStorage so assignment works
+      let finalProps = propsData || [];
+      if (finalProps.length === 0) {
+        const localProps = getLocalProperties().filter((p) => p.isActive);
+        const localSlugs = new Set(localProps.map((p) => p.slug));
+
+        if (localProps.length > 0) {
+          // Insert only (slug) not already present
+          const toInsert = localProps.filter((p) => !finalProps.some((x) => (x as any).slug === p.slug) && localSlugs.has(p.slug));
+
+          if (toInsert.length > 0) {
+            await supabase.from('properties').insert(
+              toInsert.map((p) => ({
+                name: p.name,
+                slug: p.slug,
+                latitude: p.latitude,
+                longitude: p.longitude,
+                address: p.address ?? null,
+                description: p.description ?? null,
+                is_active: true,
+                has_custom_map: !!(p as any).hasCustomMap,
+                etapa: null,
+              }))
+            );
+          }
+
+          const { data: propsData2 } = await supabase
+            .from('properties')
+            .select('id, name')
+            .order('name');
+          finalProps = propsData2 || [];
+        }
+      }
+
+      setProperties(finalProps);
 
       // Get profiles
       const { data: profilesData, error: profilesError } = await supabase
@@ -134,14 +170,14 @@ const AdminUsers = () => {
       }
 
       // Map roles and property access to profiles
-      const usersWithRoles = (profilesData || []).map(profileData => {
-        const userRole = rolesData?.find(r => r.user_id === profileData.user_id);
+      const usersWithRoles = (profilesData || []).map((profileData) => {
+        const userRole = rolesData?.find((r) => r.user_id === profileData.user_id);
         const userProperties = (accessData || [])
-          .filter(a => a.profile_id === profileData.id)
-          .map(a => a.property_id);
+          .filter((a) => a.profile_id === profileData.id)
+          .map((a) => a.property_id);
         return {
           ...profileData,
-          role: (userRole?.role || profileData.role || 'usuario') as UserRole,
+          role: ((userRole?.role as UserRole) || 'usuario') as UserRole,
           assignedProperties: userProperties,
         };
       });
@@ -273,46 +309,26 @@ const AdminUsers = () => {
           description: `${formData.full_name} ha sido actualizado.`,
         });
       } else {
-        // Create new user via signup
-        const { error } = await signup(
-          formData.email, 
-          formData.password, 
-          formData.full_name,
-          formData.role
-        );
+        // Create new user via backend function (does NOT change current session)
+        const { data, error } = await supabase.functions.invoke('create-user', {
+          body: {
+            email: formData.email,
+            password: formData.password,
+            full_name: formData.full_name,
+            role: formData.role,
+            property_ids: formData.role === 'admin' ? [] : selectedProperties,
+          },
+        });
 
-        if (error) {
+        if (error || !data?.ok) {
+          const message = error?.message || data?.error || 'No se pudo crear el usuario';
           toast({
             title: 'Error',
-            description: error,
+            description: message,
             variant: 'destructive',
           });
           setSubmitting(false);
           return;
-        }
-
-        // Wait a bit for the user to be created and then insert role
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Get the newly created user profile
-        const { data: newProfile } = await supabase
-          .from('profiles')
-          .select('id, user_id')
-          .eq('email', formData.email)
-          .maybeSingle();
-
-        if (newProfile?.user_id) {
-          await supabase
-            .from('user_roles')
-            .insert({
-              user_id: newProfile.user_id,
-              role: formData.role,
-            });
-
-          // Save property access for new user (if portero/usuario)
-          if (newProfile.id && formData.role !== 'admin') {
-            await savePropertyAccess(newProfile.id);
-          }
         }
 
         toast({
