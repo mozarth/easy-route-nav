@@ -5,6 +5,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const ADMIN_EMAIL = 'administracion@salenza.com'
+const ADMIN_PASSWORD = 'Salenza2025'
+const ADMIN_FULL_NAME = 'Administrador Salenza'
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -17,52 +21,87 @@ Deno.serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // Create admin user
-    const { data: user, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: 'administracion@salenza.com',
-      password: 'Salenza2025',
+    // Try create admin user
+    const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
       email_confirm: true,
       user_metadata: {
-        full_name: 'Administrador Salenza',
-        role: 'admin'
-      }
+        full_name: ADMIN_FULL_NAME,
+      },
     })
 
+    // If already exists, find the user by email
+    let adminUserId: string | null = created?.user?.id ?? null
+
     if (createError) {
-      // If user already exists, ensure they have admin role
-      if (createError.message.includes('already been registered')) {
-        const { data: existingProfile, error: profileError } = await supabaseAdmin
-          .from('profiles')
-          .select('user_id')
-          .eq('email', 'administracion@salenza.com')
-          .maybeSingle()
-
-        if (profileError) {
-          throw profileError
-        }
-
-        if (existingProfile?.user_id) {
-          await supabaseAdmin.from('user_roles').delete().eq('user_id', existingProfile.user_id)
-          await supabaseAdmin.from('user_roles').insert({ user_id: existingProfile.user_id, role: 'admin' })
-        }
-
-        return new Response(
-          JSON.stringify({ message: 'Usuario existente asegurado como admin' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+      if (!createError.message.includes('already been registered')) {
+        throw createError
       }
-      throw createError
+
+      const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+        perPage: 2000,
+      })
+
+      if (listError) throw listError
+
+      const existing = listData.users.find((u) => (u.email ?? '').toLowerCase() === ADMIN_EMAIL.toLowerCase())
+      adminUserId = existing?.id ?? null
+
+      if (!adminUserId) {
+        return new Response(JSON.stringify({ error: 'No se pudo encontrar el usuario admin existente' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
     }
 
+    if (!adminUserId) {
+      return new Response(JSON.stringify({ error: 'No se pudo crear el usuario admin' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Ensure profile exists
+    const { data: profileExisting, error: profileSelectError } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('user_id', adminUserId)
+      .maybeSingle()
+
+    if (profileSelectError) throw profileSelectError
+
+    if (!profileExisting) {
+      const { error: profileInsertError } = await supabaseAdmin.from('profiles').insert({
+        user_id: adminUserId,
+        email: ADMIN_EMAIL,
+        full_name: ADMIN_FULL_NAME,
+        is_active: true,
+      })
+
+      if (profileInsertError) throw profileInsertError
+    }
+
+    // Ensure admin role is set in user_roles (authoritative)
+    await supabaseAdmin.from('user_roles').delete().eq('user_id', adminUserId)
+    const { error: roleError } = await supabaseAdmin.from('user_roles').insert({
+      user_id: adminUserId,
+      role: 'admin',
+    })
+
+    if (roleError) throw roleError
+
     return new Response(
-      JSON.stringify({ message: 'Usuario administrador creado exitosamente', user }),
+      JSON.stringify({ ok: true, message: 'Usuario administrador asegurado', user_id: adminUserId }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })
+

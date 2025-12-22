@@ -83,6 +83,13 @@ const AdminUsers = () => {
     // Wait for auth to finish loading
     if (authLoading) return;
 
+    // If user session exists but profile isn't ready, stop the infinite spinner.
+    // (AuthProvider will try to auto-create the missing profile.)
+    if (!profile) {
+      setLoading(false);
+      return;
+    }
+
     // If the user is logged in but not admin, keep them on this page
     // and show an "access denied" message (instead of bouncing back to dashboard).
     if (profile && !isAdmin) {
