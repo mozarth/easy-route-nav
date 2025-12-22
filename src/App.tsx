@@ -14,6 +14,7 @@ import AdminProperties from "./pages/admin/AdminProperties";
 import AdminHistory from "./pages/admin/AdminHistory";
 import AdminQRCodes from "./pages/admin/AdminQRCodes";
 import AdminQRCodesEtapas from "./pages/admin/AdminQRCodesEtapas";
+import AdminQRGenerator from "./pages/admin/AdminQRGenerator";
 import AdminUsers from "./pages/admin/AdminUsers";
 import NotFound from "./pages/NotFound";
 
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="/admin/historial" element={<AdminHistory />} />
               <Route path="/admin/codigos-qr" element={<AdminQRCodes />} />
               <Route path="/admin/usuarios" element={<AdminUsers />} />
+              <Route path="/admin/generar-qr" element={<AdminQRGenerator />} />
 
               {/* Ya estaba en español */}
               <Route path="/admin/qr-etapas" element={<AdminQRCodesEtapas />} />
@@ -73,6 +75,7 @@ const App = () => (
               <Route path="/:lang/admin/codigos-qr" element={<AdminQRCodes />} />
               <Route path="/:lang/admin/usuarios" element={<AdminUsers />} />
               <Route path="/:lang/admin/qr-etapas" element={<AdminQRCodesEtapas />} />
+              <Route path="/:lang/admin/generar-qr" element={<AdminQRGenerator />} />
             </Route>
 
             {/* Catch-all */}
