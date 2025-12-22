@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, AlertCircle, ArrowLeft, Loader2, Navigation, Home } from 'lucide-react';
+import { MapPin, AlertCircle, ArrowLeft, Loader2, Navigation, Home, QrCode, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
 import { getPropertyBySlug, logAccess, Property, getLotesByPropertyId, PropertyLote } from '@/lib/storage';
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { generateQRCodeDataURL } from '@/lib/qr-generator';
 import colinasMap from '@/assets/colinas-map.jpg';
 
 const PropertyPage = () => {
@@ -24,6 +25,8 @@ const PropertyPage = () => {
   const [numeroLote, setNumeroLote] = useState('');
   const [error, setError] = useState('');
   const [loteEncontrado, setLoteEncontrado] = useState<PropertyLote | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [generatingQR, setGeneratingQR] = useState(false);
 
   useEffect(() => {
     const loadProperty = async () => {
@@ -47,12 +50,22 @@ const PropertyPage = () => {
     loadProperty();
   }, [slug]);
 
-  const handleLoteSelect = (loteId: string) => {
+  const handleLoteSelect = async (loteId: string) => {
     const lote = lotes.find(l => l.id === loteId);
-    if (lote) {
+    if (lote && property) {
       setNumeroLote(lote.numero);
       setLoteEncontrado(lote);
       setError('');
+      setQrCodeUrl(null);
+      
+      // Generate QR code with Google Maps route
+      setGeneratingQR(true);
+      const origen = `${property.latitude},${property.longitude}`;
+      const destino = `${lote.latitude},${lote.longitude}`;
+      const googleMapsUrl = `https://www.google.com/maps/dir/${origen}/${destino}`;
+      const qrDataUrl = await generateQRCodeDataURL(googleMapsUrl);
+      setQrCodeUrl(qrDataUrl);
+      setGeneratingQR(false);
     }
   };
 
@@ -70,6 +83,16 @@ const PropertyPage = () => {
     setNumeroLote('');
     setLoteEncontrado(null);
     setError('');
+    setQrCodeUrl(null);
+  };
+
+  const downloadQR = () => {
+    if (qrCodeUrl && loteEncontrado) {
+      const link = document.createElement('a');
+      link.download = `ruta-${loteEncontrado.tipo}-${loteEncontrado.numero}.png`;
+      link.href = qrCodeUrl;
+      link.click();
+    }
   };
 
   // Open Google Maps directly to property (for properties without lotes)
@@ -190,15 +213,32 @@ const PropertyPage = () => {
                   </p>
                 </div>
               ) : (
-                /* Lote found */
+                /* Lote found with QR */
                 <div className="bg-card border border-border rounded-2xl p-4 shadow-lg">
                   <div className="text-center mb-4">
-                    <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <MapPin className="w-6 h-6 text-green-500" />
-                    </div>
                     <h2 className="text-lg font-bold text-foreground">
                       {loteEncontrado.tipo === 'casa' ? 'Casa' : 'Lote'} {loteEncontrado.numero}
                     </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Escanea el QR o presiona el botón para ver la ruta
+                    </p>
+                  </div>
+
+                  {/* QR Code */}
+                  <div className="flex justify-center mb-4">
+                    {generatingQR ? (
+                      <div className="w-48 h-48 bg-muted rounded-xl flex items-center justify-center">
+                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                      </div>
+                    ) : qrCodeUrl ? (
+                      <div className="bg-white p-3 rounded-xl shadow-md">
+                        <img 
+                          src={qrCodeUrl} 
+                          alt="QR Code para ruta" 
+                          className="w-48 h-48"
+                        />
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="space-y-2">
@@ -210,11 +250,22 @@ const PropertyPage = () => {
                       <Navigation className="w-5 h-5 mr-2" />
                       Ver Ruta en Google Maps
                     </Button>
+
+                    {qrCodeUrl && (
+                      <Button
+                        onClick={downloadQR}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Descargar QR
+                      </Button>
+                    )}
                     
                     <Button
                       onClick={reiniciarBusqueda}
-                      variant="outline"
-                      className="w-full"
+                      variant="ghost"
+                      className="w-full text-muted-foreground"
                     >
                       Buscar otro lote/casa
                     </Button>
