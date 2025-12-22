@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, AlertCircle, ArrowLeft, ExternalLink, Loader2, Navigation } from 'lucide-react';
+import { MapPin, AlertCircle, ArrowLeft, Loader2, Navigation, Home, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/Logo';
-import PropertyMap from '@/components/PropertyMap';
-import { getPropertyBySlug, logAccess, Property } from '@/lib/storage';
+import { getPropertyBySlug, logAccess, Property, getLotesByPropertyId, PropertyLote } from '@/lib/storage';
 
 const PropertyPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const [property, setProperty] = useState<Property | null>(null);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const [lotes, setLotes] = useState<PropertyLote[]>([]);
   const [loading, setLoading] = useState(true);
-  const [requestingLocation, setRequestingLocation] = useState(false);
+  const [loadingLotes, setLoadingLotes] = useState(false);
+  
+  // Lote search state
+  const [numeroLote, setNumeroLote] = useState('');
+  const [error, setError] = useState('');
+  const [loteEncontrado, setLoteEncontrado] = useState<PropertyLote | null>(null);
 
   useEffect(() => {
     const loadProperty = async () => {
@@ -22,6 +26,12 @@ const PropertyPage = () => {
         
         if (found) {
           await logAccess(found.id, found.name);
+          
+          // Load lotes for this property
+          setLoadingLotes(true);
+          const propertyLotes = await getLotesByPropertyId(found.id);
+          setLotes(propertyLotes);
+          setLoadingLotes(false);
         }
         
         setLoading(false);
@@ -30,57 +40,45 @@ const PropertyPage = () => {
     loadProperty();
   }, [slug]);
 
-  const requestLocation = () => {
-    setRequestingLocation(true);
-    setLocationError(null);
-
-    if (!navigator.geolocation) {
-      setLocationError('Tu navegador no soporta geolocalización');
-      setRequestingLocation(false);
+  const buscarLote = () => {
+    setError('');
+    
+    if (!numeroLote.trim()) {
+      setError('Por favor ingrese el número de lote/casa');
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-        setRequestingLocation(false);
-      },
-      (error) => {
-        let message = 'No se pudo obtener tu ubicación';
-        if (error.code === error.PERMISSION_DENIED) {
-          message = 'Por favor, permite el acceso a tu ubicación para obtener direcciones';
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          message = 'La información de ubicación no está disponible';
-        } else if (error.code === error.TIMEOUT) {
-          message = 'Se agotó el tiempo para obtener la ubicación';
-        }
-        setLocationError(message);
-        setRequestingLocation(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      }
+    const lote = lotes.find(
+      l => l.numero.toLowerCase() === numeroLote.trim().toLowerCase()
     );
+
+    if (lote) {
+      setLoteEncontrado(lote);
+    } else {
+      setError(`No se encontró el lote/casa "${numeroLote}"`);
+    }
   };
 
-  const openGoogleMaps = () => {
-    if (!property) return;
-    
-    const destination = `${property.latitude},${property.longitude}`;
-    let url: string;
-    
-    if (userLocation) {
-      const origin = `${userLocation.lat},${userLocation.lng}`;
-      url = `https://www.google.com/maps/dir/${origin}/${destination}`;
-    } else {
-      url = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+  const abrirGoogleMaps = () => {
+    if (loteEncontrado && property) {
+      // Use property coordinates as entrance/origin
+      const origen = `${property.latitude},${property.longitude}`;
+      const destino = `${loteEncontrado.latitude},${loteEncontrado.longitude}`;
+      const url = `https://www.google.com/maps/dir/${origen}/${destino}`;
+      window.open(url, '_blank');
     }
-    
+  };
+
+  const reiniciarBusqueda = () => {
+    setNumeroLote('');
+    setLoteEncontrado(null);
+    setError('');
+  };
+
+  // Open Google Maps directly to property (for properties without lotes)
+  const openGoogleMapsToProperty = () => {
+    if (!property) return;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${property.latitude},${property.longitude}`;
     window.open(url, '_blank');
   };
 
@@ -115,124 +113,161 @@ const PropertyPage = () => {
     );
   }
 
+  // If property has lotes, show the lote finder interface
+  const hasLotes = lotes.length > 0;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Logo fixed top-left */}
       <div className="fixed top-4 left-4 z-50">
         <Logo size="md" showText />
       </div>
 
-      {/* Header */}
-      <header className="bg-card/80 backdrop-blur-xl border-b border-border/50 sticky top-0 z-10 pt-16">
-        <div className="container max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl gradient-primary flex items-center justify-center glow-primary">
-              <MapPin className="w-7 h-7 text-primary-foreground" />
+      <div className="flex flex-col items-center justify-center min-h-screen p-6 pt-20">
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <MapPin className="w-10 h-10 text-primary" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">{property.name}</h1>
-              {property.address && (
-                <p className="text-muted-foreground text-sm">{property.address}</p>
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              {property.name}
+            </h1>
+            {property.etapa && (
+              <p className="text-lg text-primary font-semibold">
+                {property.etapa}
+              </p>
+            )}
+            {property.address && (
+              <p className="text-muted-foreground text-sm mt-1">
+                {property.address}
+              </p>
+            )}
+          </div>
+
+          {loadingLotes ? (
+            <div className="text-center py-8">
+              <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-2" />
+              <p className="text-muted-foreground text-sm">Cargando lotes...</p>
+            </div>
+          ) : hasLotes ? (
+            // Property has lotes - show lote finder
+            <>
+              {!loteEncontrado ? (
+                /* Search form */
+                <div className="bg-card border border-border rounded-2xl p-6 shadow-lg">
+                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Home className="w-5 h-5 text-primary" />
+                    Ingrese su número de lote/casa
+                  </h2>
+                  
+                  <div className="space-y-4">
+                    <Input
+                      type="text"
+                      placeholder="Ej: 1, 2, A1, B2..."
+                      value={numeroLote}
+                      onChange={(e) => setNumeroLote(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && buscarLote()}
+                      className="text-center text-xl h-14"
+                    />
+                    
+                    {error && (
+                      <p className="text-destructive text-sm text-center">{error}</p>
+                    )}
+                    
+                    <Button
+                      onClick={buscarLote}
+                      className="w-full h-12 text-lg"
+                      size="lg"
+                    >
+                      <Search className="w-5 h-5 mr-2" />
+                      Buscar
+                    </Button>
+                  </div>
+
+                  {/* Available lotes hint */}
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <p className="text-muted-foreground text-xs text-center">
+                      Lotes/casas disponibles: {lotes.length}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* Lote found */
+                <div className="bg-card border border-border rounded-2xl p-6 shadow-lg">
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <MapPin className="w-8 h-8 text-green-500" />
+                    </div>
+                    <h2 className="text-xl font-bold text-foreground">
+                      ¡Encontrado!
+                    </h2>
+                    <p className="text-muted-foreground mt-1">
+                      {loteEncontrado.tipo === 'casa' ? 'Casa' : 'Lote'} {loteEncontrado.numero}
+                    </p>
+                  </div>
+
+                  <div className="bg-muted/50 rounded-lg p-4 mb-6">
+                    <p className="text-sm text-muted-foreground text-center">
+                      Coordenadas: {loteEncontrado.latitude.toFixed(6)}, {loteEncontrado.longitude.toFixed(6)}
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Button
+                      onClick={abrirGoogleMaps}
+                      className="w-full h-12 text-lg bg-green-600 hover:bg-green-700"
+                      size="lg"
+                    >
+                      <Navigation className="w-5 h-5 mr-2" />
+                      Ver Ruta en Google Maps
+                    </Button>
+                    
+                    <Button
+                      onClick={reiniciarBusqueda}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Buscar otro lote/casa
+                    </Button>
+                  </div>
+                </div>
               )}
-            </div>
-          </div>
-        </div>
-      </header>
 
-      {/* Content */}
-      <main className="container max-w-2xl mx-auto px-4 py-8">
-        {/* Custom Map for Colinas */}
-        <PropertyMap propertySlug={property.slug} />
+              {/* Info */}
+              <p className="text-center text-muted-foreground text-sm mt-6">
+                Al abrir Google Maps, verá la ruta desde la entrada hasta su lote/casa
+              </p>
+            </>
+          ) : (
+            // Property has no lotes - show direct navigation
+            <div className="bg-card border border-border rounded-2xl p-6 shadow-lg">
+              {property.description && (
+                <p className="text-foreground mb-4">{property.description}</p>
+              )}
 
-        {/* Description */}
-        {property.description && (
-          <div className="glass-card p-6 mb-6">
-            <p className="text-foreground">{property.description}</p>
-          </div>
-        )}
-
-        {/* Coordinates */}
-        <div className="glass-card p-6 mb-6">
-          <h2 className="font-semibold mb-3 flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-primary" />
-            Coordenadas GPS
-          </h2>
-          <div className="font-mono text-sm bg-secondary rounded-lg p-3">
-            <p>Latitud: {property.latitude}</p>
-            <p>Longitud: {property.longitude}</p>
-          </div>
-        </div>
-
-        {/* Location Request */}
-        {!userLocation && (
-          <div className="glass-card p-6 mb-6">
-            <h2 className="font-semibold mb-3 flex items-center gap-2">
-              <Navigation className="w-5 h-5 text-primary" />
-              Tu Ubicación
-            </h2>
-            
-            {locationError && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-4">
-                <p className="text-destructive text-sm flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
-                  {locationError}
+              <div className="bg-muted/50 rounded-lg p-4 mb-6">
+                <p className="text-sm text-muted-foreground text-center">
+                  Coordenadas: {property.latitude.toFixed(6)}, {property.longitude.toFixed(6)}
                 </p>
               </div>
-            )}
-            
-            <p className="text-muted-foreground text-sm mb-4">
-              Permite el acceso a tu ubicación para calcular la ruta más óptima hacia la propiedad.
-            </p>
-            
-            <Button 
-              onClick={requestLocation} 
-              disabled={requestingLocation}
-              variant="navigation"
-              className="w-full"
-            >
-              {requestingLocation ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Obteniendo ubicación...
-                </>
-              ) : (
-                <>
-                  <Navigation className="w-4 h-4" />
-                  Permitir Ubicación
-                </>
-              )}
-            </Button>
-          </div>
-        )}
 
-        {/* User Location Found */}
-        {userLocation && (
-          <div className="glass-card p-6 mb-6 border-success/30">
-            <h2 className="font-semibold mb-3 flex items-center gap-2 text-success">
-              <Navigation className="w-5 h-5" />
-              Ubicación Detectada
-            </h2>
-            <div className="font-mono text-sm bg-secondary rounded-lg p-3">
-              <p>Tu ubicación: {userLocation.lat.toFixed(6)}, {userLocation.lng.toFixed(6)}</p>
+              <Button
+                onClick={openGoogleMapsToProperty}
+                className="w-full h-12 text-lg bg-green-600 hover:bg-green-700"
+                size="lg"
+              >
+                <Navigation className="w-5 h-5 mr-2" />
+                Abrir en Google Maps
+              </Button>
+
+              <p className="text-center text-muted-foreground text-sm mt-4">
+                Se abrirá Google Maps con la ruta hacia {property.name}
+              </p>
             </div>
-          </div>
-        )}
-
-        {/* Open Google Maps Button */}
-        <Button 
-          onClick={openGoogleMaps}
-          variant="accent"
-          size="xl"
-          className="w-full"
-        >
-          <ExternalLink className="w-5 h-5" />
-          Abrir en Google Maps
-        </Button>
-
-        <p className="text-center text-muted-foreground text-xs mt-4">
-          Se abrirá Google Maps con la ruta hacia {property.name}
-        </p>
-      </main>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
