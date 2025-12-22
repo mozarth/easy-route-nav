@@ -31,7 +31,7 @@ export const AdminNav = () => {
   const { logout } = useAuth();
   const location = useLocation();
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname.startsWith(path);
 
   return (
     <>
