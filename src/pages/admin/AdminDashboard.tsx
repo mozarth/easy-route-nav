@@ -75,7 +75,7 @@ const AdminDashboard = () => {
             <h1 className="text-2xl font-bold">Panel</h1>
             <p className="text-muted-foreground">Resumen del sistema de navegación</p>
           </div>
-          <Link to="/admin/properties">
+          <Link to="/admin/propiedades">
             <Button>
               <Plus className="w-4 h-4" />
               Nueva Propiedad
@@ -168,19 +168,19 @@ const AdminDashboard = () => {
         <div className="glass-card p-6">
           <h2 className="font-semibold mb-4">Acciones Rápidas</h2>
           <div className="flex flex-wrap gap-3">
-            <Link to="/admin/properties">
+            <Link to="/admin/propiedades">
               <Button variant="outline">
                 <MapPin className="w-4 h-4" />
                 Gestionar Propiedades
               </Button>
             </Link>
-            <Link to="/admin/qr-codes">
+            <Link to="/admin/codigos-qr">
               <Button variant="outline">
                 <QrCode className="w-4 h-4" />
                 Generar QR Codes
               </Button>
             </Link>
-            <Link to="/admin/history">
+            <Link to="/admin/historial">
               <Button variant="outline">
                 <Download className="w-4 h-4" />
                 Exportar Reportes

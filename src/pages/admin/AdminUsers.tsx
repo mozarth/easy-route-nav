@@ -475,7 +475,7 @@ const AdminUsers = () => {
               Tu cuenta no tiene permisos de administrador para ver Usuarios.
             </p>
             <div className="mt-6 flex justify-center">
-              <Link to="/admin/dashboard">
+              <Link to="/admin/panel">
                 <Button variant="outline">Volver al Panel</Button>
               </Link>
             </div>
