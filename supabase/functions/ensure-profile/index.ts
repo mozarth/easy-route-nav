@@ -46,45 +46,42 @@ Deno.serve(async (req) => {
     const email = (user.email ?? '').trim().toLowerCase()
     const fullName = String((user.user_metadata as any)?.full_name ?? email).trim()
 
-    // Ensure profile exists
-    const { data: existingProfile, error: profileSelectError } = await supabaseAdmin
+    // Use upsert to avoid race conditions (multiple simultaneous calls)
+    const { data: upserted, error: upsertError } = await supabaseAdmin
       .from('profiles')
-      .select('id, user_id')
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    if (profileSelectError) {
-      return new Response(JSON.stringify({ error: profileSelectError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    if (existingProfile) {
-      return new Response(JSON.stringify({ ok: true, profile_id: existingProfile.id, created: false }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    const { data: inserted, error: insertError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        user_id: userId,
-        email,
-        full_name: fullName,
-        is_active: true,
-      })
+      .upsert(
+        {
+          user_id: userId,
+          email,
+          full_name: fullName,
+          is_active: true,
+        },
+        { onConflict: 'user_id', ignoreDuplicates: false }
+      )
       .select('id')
       .single()
 
-    if (insertError) {
-      return new Response(JSON.stringify({ error: insertError.message }), {
+    if (upsertError) {
+      // If it's a duplicate key error, just fetch the existing profile
+      if (upsertError.code === '23505') {
+        const { data: existing } = await supabaseAdmin
+          .from('profiles')
+          .select('id')
+          .eq('user_id', userId)
+          .single()
+
+        return new Response(JSON.stringify({ ok: true, profile_id: existing?.id, created: false }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      return new Response(JSON.stringify({ error: upsertError.message }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    return new Response(JSON.stringify({ ok: true, profile_id: inserted.id, created: true }), {
+    return new Response(JSON.stringify({ ok: true, profile_id: upserted.id, created: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error: unknown) {
