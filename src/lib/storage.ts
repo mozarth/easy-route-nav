@@ -23,6 +23,7 @@ export interface PropertyLote {
   tipo: 'lote' | 'casa';
   latitude: number;
   longitude: number;
+  imageUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -70,6 +71,7 @@ const transformPropertyLote = (row: any): PropertyLote => ({
   tipo: row.tipo as 'lote' | 'casa',
   latitude: row.latitude,
   longitude: row.longitude,
+  imageUrl: row.image_url,
   createdAt: new Date(row.created_at),
   updatedAt: new Date(row.updated_at),
 });
@@ -296,13 +298,22 @@ export const getLotesByPropertyId = async (propertyId: string): Promise<Property
 };
 
 // Save lote (insert or update)
-export const saveLote = async (lote: Partial<PropertyLote> & { propertyId: string; numero: string; tipo: 'lote' | 'casa'; latitude: number; longitude: number }): Promise<PropertyLote | null> => {
+export const saveLote = async (
+  lote: Partial<PropertyLote> & {
+    propertyId: string;
+    numero: string;
+    tipo: 'lote' | 'casa';
+    latitude: number;
+    longitude: number;
+  }
+): Promise<PropertyLote | null> => {
   const payload = {
     property_id: lote.propertyId,
     numero: lote.numero,
     tipo: lote.tipo,
     latitude: lote.latitude,
     longitude: lote.longitude,
+    image_url: lote.imageUrl ?? null,
   };
 
   if (lote.id) {
@@ -351,3 +362,34 @@ export const deleteLote = async (id: string): Promise<boolean> => {
 
   return true;
 };
+
+export const uploadLoteImage = async (args: {
+  propertyId: string;
+  file: File;
+  loteId?: string;
+}): Promise<string | null> => {
+  try {
+    const extRaw = args.file.name.split('.').pop()?.toLowerCase();
+    const ext = extRaw && /^[a-z0-9]+$/.test(extRaw) ? extRaw : 'jpg';
+    const objectName = `${args.propertyId}/${args.loteId ?? crypto.randomUUID()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('lote-images')
+      .upload(objectName, args.file, {
+        upsert: true,
+        contentType: args.file.type || undefined,
+      });
+
+    if (uploadError) {
+      console.error('Error uploading lote image:', uploadError);
+      return null;
+    }
+
+    const { data } = supabase.storage.from('lote-images').getPublicUrl(objectName);
+    return data.publicUrl;
+  } catch (e) {
+    console.error('Error uploading lote image:', e);
+    return null;
+  }
+};
+
