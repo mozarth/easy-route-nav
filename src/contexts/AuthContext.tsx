@@ -35,19 +35,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (userId: string) => {
     try {
-      // Fetch profile
-      const { data: profileData, error: profileError } = await supabase
+      // 1) Fetch profile (if missing, create it once via backend function)
+      const { data: profileData1, error: profileError1 } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
+      if (profileError1) {
+        console.error('Error fetching profile:', profileError1);
         return null;
       }
 
-      // Fetch role from user_roles table
+      let profileData = profileData1;
+
+      if (!profileData) {
+        const { error: ensureError } = await supabase.functions.invoke('ensure-profile', {
+          body: {},
+        });
+
+        if (ensureError) {
+          console.error('Error ensuring profile:', ensureError);
+          return null;
+        }
+
+        const { data: profileData2, error: profileError2 } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (profileError2) {
+          console.error('Error fetching profile (after ensure):', profileError2);
+          return null;
+        }
+
+        profileData = profileData2;
+      }
+
+      if (!profileData) return null;
+
+      // 2) Fetch role from user_roles (authoritative)
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
@@ -58,15 +86,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error fetching role:', roleError);
       }
 
-      // Combine profile with role from user_roles table
-      if (profileData) {
-        return {
-          ...profileData,
-          role: (roleData?.role || profileData.role || 'usuario') as UserRole,
-        } as Profile;
-      }
-      
-      return null;
+      return {
+        ...profileData,
+        role: ((roleData?.role as UserRole) ?? 'usuario') as UserRole,
+      } as Profile;
     } catch (err) {
       console.error('Error in fetchProfile:', err);
       return null;
@@ -74,33 +97,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
-        // Defer profile fetch to avoid deadlock
         if (session?.user) {
+          setIsLoading(true);
           setTimeout(() => {
-            fetchProfile(session.user.id).then(setProfile);
+            fetchProfile(session.user.id)
+              .then(setProfile)
+              .finally(() => setIsLoading(false));
           }, 0);
         } else {
           setProfile(null);
+          setIsLoading(false);
         }
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
+
       if (session?.user) {
-        fetchProfile(session.user.id).then((p) => {
-          setProfile(p);
-          setIsLoading(false);
-        });
+        setIsLoading(true);
+        fetchProfile(session.user.id)
+          .then((p) => setProfile(p))
+          .finally(() => setIsLoading(false));
       } else {
         setIsLoading(false);
       }
