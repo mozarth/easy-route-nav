@@ -9,14 +9,14 @@ import {
   LogOut,
   Save,
   X,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProperties, saveProperty, deleteProperty, togglePropertyActive } from '@/lib/storage';
-import { Property } from '@/types/property';
+import { getProperties, saveProperty, deleteProperty, togglePropertyActive, Property } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { AdminNav } from '@/components/admin/AdminNav';
 
@@ -26,6 +26,8 @@ const AdminProperties = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -36,8 +38,11 @@ const AdminProperties = () => {
     etapa: '',
   });
 
-  const loadProperties = () => {
-    setProperties(getProperties());
+  const loadProperties = async () => {
+    setLoading(true);
+    const props = await getProperties();
+    setProperties(props);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -84,55 +89,81 @@ const AdminProperties = () => {
       longitude: property.longitude.toString(),
       address: property.address || '',
       description: property.description || '',
-      etapa: (property as any).etapa || '',
+      etapa: property.etapa || '',
     });
     setShowForm(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     
-    const propertyData: Property = {
-      id: editingProperty?.id || crypto.randomUUID(),
+    const propertyData = {
+      id: editingProperty?.id,
       name: formData.name,
       slug: formData.slug,
       latitude: parseFloat(formData.latitude),
       longitude: parseFloat(formData.longitude),
       address: formData.address || undefined,
       description: formData.description || undefined,
+      etapa: formData.etapa || undefined,
       isActive: editingProperty?.isActive ?? true,
-      createdAt: editingProperty?.createdAt || new Date(),
-      updatedAt: new Date(),
     };
 
-    saveProperty(propertyData);
-    loadProperties();
-    resetForm();
+    const result = await saveProperty(propertyData);
+    setSaving(false);
     
-    toast({
-      title: editingProperty ? 'Propiedad actualizada' : 'Propiedad creada',
-      description: `${propertyData.name} ha sido ${editingProperty ? 'actualizada' : 'creada'} exitosamente.`,
-    });
-  };
-
-  const handleDelete = (property: Property) => {
-    if (confirm(`¿Estás seguro de eliminar "${property.name}"?`)) {
-      deleteProperty(property.id);
-      loadProperties();
+    if (result) {
+      await loadProperties();
+      resetForm();
+      
       toast({
-        title: 'Propiedad eliminada',
-        description: `${property.name} ha sido eliminada.`,
+        title: editingProperty ? 'Propiedad actualizada' : 'Propiedad creada',
+        description: `${propertyData.name} ha sido ${editingProperty ? 'actualizada' : 'creada'} exitosamente.`,
+      });
+    } else {
+      toast({
+        title: 'Error',
+        description: 'No se pudo guardar la propiedad. Verifica tus permisos.',
+        variant: 'destructive',
       });
     }
   };
 
-  const handleToggleActive = (property: Property) => {
-    togglePropertyActive(property.id);
-    loadProperties();
-    toast({
-      title: property.isActive ? 'Propiedad desactivada' : 'Propiedad activada',
-      description: `${property.name} ha sido ${property.isActive ? 'desactivada' : 'activada'}.`,
-    });
+  const handleDelete = async (property: Property) => {
+    if (confirm(`¿Estás seguro de eliminar "${property.name}"?`)) {
+      const success = await deleteProperty(property.id);
+      if (success) {
+        await loadProperties();
+        toast({
+          title: 'Propiedad eliminada',
+          description: `${property.name} ha sido eliminada.`,
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'No se pudo eliminar la propiedad.',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
+  const handleToggleActive = async (property: Property) => {
+    const success = await togglePropertyActive(property.id);
+    if (success) {
+      await loadProperties();
+      toast({
+        title: property.isActive ? 'Propiedad desactivada' : 'Propiedad activada',
+        description: `${property.name} ha sido ${property.isActive ? 'desactivada' : 'activada'}.`,
+      });
+    } else {
+      toast({
+        title: 'Error',
+        description: 'No se pudo cambiar el estado de la propiedad.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -236,8 +267,8 @@ const AdminProperties = () => {
               </div>
 
               <div className="flex gap-3 pt-2">
-                <Button type="submit">
-                  <Save className="w-4 h-4" />
+                <Button type="submit" disabled={saving}>
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   {editingProperty ? 'Actualizar' : 'Guardar'}
                 </Button>
                 <Button type="button" variant="outline" onClick={resetForm}>
@@ -248,76 +279,86 @@ const AdminProperties = () => {
           </div>
         )}
 
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-20">
+            <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Cargando propiedades...</p>
+          </div>
+        )}
+
         {/* Properties List */}
-        <div className="grid gap-4">
-          {properties.map((property, index) => (
-            <div 
-              key={property.id}
-              className={`glass-card p-6 animate-fade-in ${!property.isActive ? 'opacity-60' : ''}`}
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${property.isActive ? 'gradient-primary' : 'bg-secondary'}`}>
-                    <MapPin className={`w-6 h-6 ${property.isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">{property.name}</h3>
-                    <p className="text-muted-foreground text-sm">{property.address || 'Sin dirección'}</p>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                      <span className="font-mono bg-secondary px-2 py-1 rounded">
-                        /{property.slug}
-                      </span>
-                      <span>
-                        {property.latitude.toFixed(4)}, {property.longitude.toFixed(4)}
-                      </span>
+        {!loading && (
+          <div className="grid gap-4">
+            {properties.map((property, index) => (
+              <div 
+                key={property.id}
+                className={`glass-card p-6 animate-fade-in ${!property.isActive ? 'opacity-60' : ''}`}
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${property.isActive ? 'gradient-primary' : 'bg-secondary'}`}>
+                      <MapPin className={`w-6 h-6 ${property.isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">{property.name}</h3>
+                      <p className="text-muted-foreground text-sm">{property.address || 'Sin dirección'}</p>
+                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                        <span className="font-mono bg-secondary px-2 py-1 rounded">
+                          /{property.slug}
+                        </span>
+                        <span>
+                          {property.latitude.toFixed(4)}, {property.longitude.toFixed(4)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => handleToggleActive(property)}
-                    title={property.isActive ? 'Desactivar' : 'Activar'}
-                  >
-                    {property.isActive ? (
-                      <Power className="w-4 h-4 text-success" />
-                    ) : (
-                      <PowerOff className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => handleEdit(property)}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => handleDelete(property)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleToggleActive(property)}
+                      title={property.isActive ? 'Desactivar' : 'Activar'}
+                    >
+                      {property.isActive ? (
+                        <Power className="w-4 h-4 text-success" />
+                      ) : (
+                        <PowerOff className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleEdit(property)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleDelete(property)}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
 
-          {properties.length === 0 && (
-            <div className="text-center py-12 glass-card">
-              <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No hay propiedades registradas.</p>
-              <Button className="mt-4" onClick={() => setShowForm(true)}>
-                <Plus className="w-4 h-4" />
-                Agregar Primera Propiedad
-              </Button>
-            </div>
-          )}
-        </div>
+            {properties.length === 0 && (
+              <div className="text-center py-12 glass-card">
+                <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No hay propiedades registradas.</p>
+                <Button className="mt-4" onClick={() => setShowForm(true)}>
+                  <Plus className="w-4 h-4" />
+                  Agregar Primera Propiedad
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );

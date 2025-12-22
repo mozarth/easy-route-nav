@@ -34,7 +34,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { AdminNav } from '@/components/admin/AdminNav';
-import { getProperties as getLocalProperties } from '@/lib/storage';
+// Storage is now fully async and uses Supabase directly
 
 type UserRole = 'admin' | 'portero' | 'usuario';
 
@@ -114,39 +114,8 @@ const AdminUsers = () => {
 
       if (propsError) throw propsError;
 
-      // If DB is empty, seed from localStorage so assignment works
-      let finalProps = propsData || [];
-      if (finalProps.length === 0) {
-        const localProps = getLocalProperties().filter((p) => p.isActive);
-        const localSlugs = new Set(localProps.map((p) => p.slug));
-
-        if (localProps.length > 0) {
-          // Insert only (slug) not already present
-          const toInsert = localProps.filter((p) => !finalProps.some((x) => (x as any).slug === p.slug) && localSlugs.has(p.slug));
-
-          if (toInsert.length > 0) {
-            await supabase.from('properties').insert(
-              toInsert.map((p) => ({
-                name: p.name,
-                slug: p.slug,
-                latitude: p.latitude,
-                longitude: p.longitude,
-                address: p.address ?? null,
-                description: p.description ?? null,
-                is_active: true,
-                has_custom_map: !!(p as any).hasCustomMap,
-                etapa: null,
-              }))
-            );
-          }
-
-          const { data: propsData2 } = await supabase
-            .from('properties')
-            .select('id, name')
-            .order('name');
-          finalProps = propsData2 || [];
-        }
-      }
+      // Use properties directly from Supabase
+      const finalProps = propsData || [];
 
       setProperties(finalProps);
 

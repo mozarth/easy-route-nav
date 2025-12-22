@@ -4,8 +4,7 @@ import { MapPin, AlertCircle, ArrowLeft, ExternalLink, Loader2, Navigation } fro
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
 import PropertyMap from '@/components/PropertyMap';
-import { getPropertyBySlug, logAccess } from '@/lib/storage';
-import { Property } from '@/types/property';
+import { getPropertyBySlug, logAccess, Property } from '@/lib/storage';
 
 const PropertyPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -16,16 +15,19 @@ const PropertyPage = () => {
   const [requestingLocation, setRequestingLocation] = useState(false);
 
   useEffect(() => {
-    if (slug) {
-      const found = getPropertyBySlug(slug);
-      setProperty(found || null);
-      
-      if (found) {
-        logAccess(found.id, found.name);
+    const loadProperty = async () => {
+      if (slug) {
+        const found = await getPropertyBySlug(slug);
+        setProperty(found);
+        
+        if (found) {
+          await logAccess(found.id, found.name);
+        }
+        
+        setLoading(false);
       }
-      
-      setLoading(false);
-    }
+    };
+    loadProperty();
   }, [slug]);
 
   const requestLocation = () => {

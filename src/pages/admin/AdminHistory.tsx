@@ -9,13 +9,13 @@ import {
   FileText,
   Trash2,
   LogOut,
-  Filter
+  Filter,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAccessLogs, clearAccessLogs, getProperties } from '@/lib/storage';
-import { AccessLog } from '@/types/property';
+import { getAccessLogs, clearAccessLogs, getProperties, AccessLog, Property } from '@/lib/storage';
 import { exportToCSV, exportToPDF } from '@/lib/export-utils';
 import { useToast } from '@/hooks/use-toast';
 import { AdminNav } from '@/components/admin/AdminNav';
@@ -28,13 +28,21 @@ const AdminHistory = () => {
   const [propertyFilter, setPropertyFilter] = useState<string>('all');
   const [deviceFilter, setDeviceFilter] = useState<string>('all');
   const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const accessLogs = getAccessLogs();
-    const props = getProperties();
-    setLogs(accessLogs);
-    setFilteredLogs(accessLogs);
-    setProperties(props.map(p => ({ id: p.id, name: p.name })));
+    const loadData = async () => {
+      setLoading(true);
+      const [accessLogs, props] = await Promise.all([
+        getAccessLogs(),
+        getProperties()
+      ]);
+      setLogs(accessLogs);
+      setFilteredLogs(accessLogs);
+      setProperties(props.map((p: Property) => ({ id: p.id, name: p.name })));
+      setLoading(false);
+    };
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -51,15 +59,23 @@ const AdminHistory = () => {
     setFilteredLogs(filtered);
   }, [logs, propertyFilter, deviceFilter]);
 
-  const handleClearLogs = () => {
+  const handleClearLogs = async () => {
     if (confirm('¿Estás seguro de eliminar todo el historial? Esta acción no se puede deshacer.')) {
-      clearAccessLogs();
-      setLogs([]);
-      setFilteredLogs([]);
-      toast({
-        title: 'Historial eliminado',
-        description: 'Todo el historial de accesos ha sido eliminado.',
-      });
+      const success = await clearAccessLogs();
+      if (success) {
+        setLogs([]);
+        setFilteredLogs([]);
+        toast({
+          title: 'Historial eliminado',
+          description: 'Todo el historial de accesos ha sido eliminado.',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'No se pudo eliminar el historial.',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -173,64 +189,74 @@ const AdminHistory = () => {
           </div>
         </div>
 
-        {/* Logs Table */}
-        <div className="glass-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Fecha</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Hora</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Propiedad</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Dispositivo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLogs.map((log, index) => (
-                  <tr 
-                    key={log.id} 
-                    className="border-b border-border/50 hover:bg-secondary/30 transition-colors animate-fade-in"
-                    style={{ animationDelay: `${index * 20}ms` }}
-                  >
-                    <td className="p-4 text-sm">
-                      {new Date(log.accessedAt).toLocaleDateString('es-ES', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </td>
-                    <td className="p-4 text-sm font-mono">
-                      {new Date(log.accessedAt).toLocaleTimeString('es-ES', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                      })}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-primary" />
-                        <span className="text-sm">{log.propertyName}</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {getDeviceIcon(log.deviceType)}
-                        <span>{getDeviceName(log.deviceType)}</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-20">
+            <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Cargando historial...</p>
           </div>
+        )}
 
-          {filteredLogs.length === 0 && (
-            <div className="text-center py-12">
-              <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No hay registros de acceso.</p>
+        {/* Logs Table */}
+        {!loading && (
+          <div className="glass-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Fecha</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Hora</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Propiedad</th>
+                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Dispositivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLogs.map((log, index) => (
+                    <tr 
+                      key={log.id} 
+                      className="border-b border-border/50 hover:bg-secondary/30 transition-colors animate-fade-in"
+                      style={{ animationDelay: `${index * 20}ms` }}
+                    >
+                      <td className="p-4 text-sm">
+                        {new Date(log.accessedAt).toLocaleDateString('es-ES', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </td>
+                      <td className="p-4 text-sm font-mono">
+                        {new Date(log.accessedAt).toLocaleTimeString('es-ES', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        })}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-primary" />
+                          <span className="text-sm">{log.propertyName}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          {getDeviceIcon(log.deviceType)}
+                          <span>{getDeviceName(log.deviceType)}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+
+            {filteredLogs.length === 0 && (
+              <div className="text-center py-12">
+                <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No hay registros de acceso.</p>
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );
