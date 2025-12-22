@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
   Users, 
   Plus,
@@ -7,11 +7,6 @@ import {
   Trash2,
   Power,
   PowerOff,
-  BarChart3,
-  Clock,
-  QrCode,
-  MapPin,
-  Home,
   LogOut,
   Save,
   X,
@@ -35,6 +30,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
+import { AdminNav } from '@/components/admin/AdminNav';
 
 type UserRole = 'admin' | 'portero' | 'usuario';
 
@@ -58,7 +54,6 @@ const userSchema = z.object({
 const AdminUsers = () => {
   const { logout, isAdmin, isLoading: authLoading, signup, profile } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
@@ -351,63 +346,7 @@ const AdminUsers = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-0">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border p-4 hidden lg:block">
-        <div className="mb-8 px-2">
-          <Logo size="md" showText />
-        </div>
-
-        <nav className="space-y-1">
-          <Link 
-            to="/admin/dashboard" 
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors"
-          >
-            <BarChart3 className="w-5 h-5" />
-            Dashboard
-          </Link>
-          <Link 
-            to="/admin/properties" 
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors"
-          >
-            <MapPin className="w-5 h-5" />
-            Propiedades
-          </Link>
-          <Link 
-            to="/admin/history" 
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors"
-          >
-            <Clock className="w-5 h-5" />
-            Historial
-          </Link>
-          <Link 
-            to="/admin/qr-codes" 
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors"
-          >
-            <QrCode className="w-5 h-5" />
-            Códigos QR
-          </Link>
-          <Link 
-            to="/admin/users" 
-            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary"
-          >
-            <Users className="w-5 h-5" />
-            Usuarios
-          </Link>
-        </nav>
-
-        <div className="absolute bottom-4 left-4 right-4 space-y-2">
-          <Link to="/">
-            <Button variant="outline" size="sm" className="w-full justify-start">
-              <Home className="w-4 h-4" />
-              Ver Sitio Público
-            </Button>
-          </Link>
-          <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground" onClick={logout}>
-            <LogOut className="w-4 h-4" />
-            Cerrar Sesión
-          </Button>
-        </div>
-      </aside>
+      <AdminNav />
 
       {/* Main Content */}
       <main className="lg:ml-64 p-4 lg:p-8">
@@ -613,26 +552,6 @@ const AdminUsers = () => {
             )}
           </div>
         )}
-
-        {/* Mobile Navigation */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border p-2 flex justify-around">
-          <Link to="/admin/dashboard" className="flex flex-col items-center gap-1 p-2 text-muted-foreground">
-            <BarChart3 className="w-5 h-5" />
-            <span className="text-xs">Dashboard</span>
-          </Link>
-          <Link to="/admin/properties" className="flex flex-col items-center gap-1 p-2 text-muted-foreground">
-            <MapPin className="w-5 h-5" />
-            <span className="text-xs">Propiedades</span>
-          </Link>
-          <Link to="/admin/qr-codes" className="flex flex-col items-center gap-1 p-2 text-muted-foreground">
-            <QrCode className="w-5 h-5" />
-            <span className="text-xs">QR</span>
-          </Link>
-          <Link to="/admin/users" className="flex flex-col items-center gap-1 p-2 text-primary">
-            <Users className="w-5 h-5" />
-            <span className="text-xs">Usuarios</span>
-          </Link>
-        </nav>
       </main>
     </div>
   );
