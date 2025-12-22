@@ -73,21 +73,21 @@ const AdminUsers = () => {
   });
 
   useEffect(() => {
-    // Wait for auth to finish loading AND profile to be loaded before checking admin status
+    // Wait for auth to finish loading
     if (authLoading) return;
-    
-    // Only redirect if we have a profile and it's not admin
-    // If profile is null, we're still loading or user is not logged in
+
+    // If the user is logged in but not admin, keep them on this page
+    // and show an "access denied" message (instead of bouncing back to dashboard).
     if (profile && !isAdmin) {
-      navigate('/admin/dashboard');
+      setLoading(false);
       return;
     }
-    
-    // Only load users if we're confirmed admin
+
+    // Load users only for confirmed admins
     if (isAdmin) {
       loadUsers();
     }
-  }, [isAdmin, authLoading, navigate, profile]);
+  }, [isAdmin, authLoading, profile]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -523,10 +523,23 @@ const AdminUsers = () => {
         )}
 
         {/* Users List */}
-        {loading || authLoading || !isAdmin ? (
+        {authLoading || loading ? (
           <div className="text-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
             <p className="text-muted-foreground">Cargando usuarios...</p>
+          </div>
+        ) : !isAdmin ? (
+          <div className="glass-card p-8 text-center">
+            <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-lg font-semibold">Acceso restringido</h2>
+            <p className="text-muted-foreground mt-2">
+              Tu cuenta no tiene permisos de administrador para ver Usuarios.
+            </p>
+            <div className="mt-6 flex justify-center">
+              <Link to="/admin/dashboard">
+                <Button variant="outline">Volver al Panel</Button>
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid gap-4">
