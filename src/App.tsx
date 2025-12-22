@@ -37,12 +37,22 @@ const App = () => (
             
             {/* Protected Admin Routes */}
             <Route element={<ProtectedRoute />}>
+              {/* Inglés */}
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/properties" element={<AdminProperties />} />
               <Route path="/admin/history" element={<AdminHistory />} />
               <Route path="/admin/qr-codes" element={<AdminQRCodes />} />
-              <Route path="/admin/qr-etapas" element={<AdminQRCodesEtapas />} />
               <Route path="/admin/users" element={<AdminUsers />} />
+
+              {/* Español (alias) */}
+              <Route path="/admin/panel" element={<AdminDashboard />} />
+              <Route path="/admin/propiedades" element={<AdminProperties />} />
+              <Route path="/admin/historial" element={<AdminHistory />} />
+              <Route path="/admin/codigos-qr" element={<AdminQRCodes />} />
+              <Route path="/admin/usuarios" element={<AdminUsers />} />
+
+              {/* Ya estaba en español */}
+              <Route path="/admin/qr-etapas" element={<AdminQRCodesEtapas />} />
             </Route>
             
             {/* Catch-all */}

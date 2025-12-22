@@ -174,7 +174,7 @@ const AdminQRCodes = () => {
           <div className="text-center py-12 glass-card">
             <QrCode className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">No hay propiedades activas para generar QR.</p>
-            <Link to="/admin/properties">
+            <Link to="/admin/propiedades">
               <Button className="mt-4">
                 <MapPin className="w-4 h-4" />
                 Ir a Propiedades

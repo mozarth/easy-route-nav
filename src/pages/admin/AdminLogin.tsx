@@ -27,7 +27,7 @@ const AdminLogin = () => {
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      navigate('/admin/dashboard');
+      navigate('/admin/panel');
     }
   }, [isAuthenticated, authLoading, navigate]);
 
@@ -64,7 +64,7 @@ const AdminLogin = () => {
         title: 'Bienvenido',
         description: 'Has iniciado sesión correctamente',
       });
-      navigate('/admin/dashboard');
+      navigate('/admin/panel');
     }
 
     setIsLoading(false);

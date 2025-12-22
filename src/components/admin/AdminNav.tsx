@@ -15,23 +15,27 @@ import { cn } from '@/lib/utils';
 
 interface NavItem {
   to: string;
+  aliases?: string[];
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
 const navItems: NavItem[] = [
-  { to: '/admin/dashboard', label: 'Panel', icon: BarChart3 },
-  { to: '/admin/properties', label: 'Propiedades', icon: MapPin },
-  { to: '/admin/history', label: 'Historial', icon: Clock },
-  { to: '/admin/qr-codes', label: 'Códigos QR', icon: QrCode },
-  { to: '/admin/users', label: 'Usuarios', icon: Users },
+  { to: '/admin/panel', aliases: ['/admin/dashboard'], label: 'Panel', icon: BarChart3 },
+  { to: '/admin/propiedades', aliases: ['/admin/properties'], label: 'Propiedades', icon: MapPin },
+  { to: '/admin/historial', aliases: ['/admin/history'], label: 'Historial', icon: Clock },
+  { to: '/admin/codigos-qr', aliases: ['/admin/qr-codes'], label: 'Códigos QR', icon: QrCode },
+  { to: '/admin/usuarios', aliases: ['/admin/users'], label: 'Usuarios', icon: Users },
 ];
 
 export const AdminNav = () => {
   const { logout } = useAuth();
   const location = useLocation();
 
-  const isActive = (path: string) => location.pathname.startsWith(path);
+  const isActive = (item: NavItem) => {
+    const paths = [item.to, ...(item.aliases ?? [])];
+    return paths.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`));
+  };
 
   return (
     <>
@@ -48,7 +52,7 @@ export const AdminNav = () => {
               to={item.to}
               className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
-                isActive(item.to)
+                isActive(item)
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:bg-secondary'
               )}
@@ -86,7 +90,7 @@ export const AdminNav = () => {
             to={item.to}
             className={cn(
               'flex flex-col items-center gap-1 p-2',
-              isActive(item.to) ? 'text-primary' : 'text-muted-foreground'
+              isActive(item) ? 'text-primary' : 'text-muted-foreground'
             )}
           >
             <item.icon className="w-5 h-5" />
