@@ -1,19 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Navigation, ArrowRight, QrCode } from 'lucide-react';
+import { Navigation, ArrowRight, QrCode, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/Header';
 import { Features } from '@/components/Features';
 import { PropertyCard } from '@/components/PropertyCard';
-import { getProperties } from '@/lib/storage';
-import { Property } from '@/types/property';
+import { getProperties, Property } from '@/lib/storage';
 
 const Index = () => {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const props = getProperties().filter(p => p.isActive);
-    setProperties(props);
+    const loadProperties = async () => {
+      const props = await getProperties();
+      setProperties(props.filter(p => p.isActive));
+      setLoading(false);
+    };
+    loadProperties();
   }, []);
 
   return (
@@ -76,19 +80,28 @@ const Index = () => {
             Selecciona una propiedad para ver su ubicación y obtener direcciones
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((property, index) => (
-              <div
-                key={property.id}
-                className="animate-fade-in-up"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <PropertyCard property={property} />
-              </div>
-            ))}
-          </div>
+          {loading && (
+            <div className="text-center py-12">
+              <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">Cargando propiedades...</p>
+            </div>
+          )}
           
-          {properties.length === 0 && (
+          {!loading && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {properties.map((property, index) => (
+                <div
+                  key={property.id}
+                  className="animate-fade-in-up"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <PropertyCard property={property} />
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {!loading && properties.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No hay propiedades activas disponibles.</p>
             </div>

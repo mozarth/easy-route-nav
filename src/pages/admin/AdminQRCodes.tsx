@@ -12,8 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProperties } from '@/lib/storage';
-import { Property } from '@/types/property';
+import { getProperties, Property } from '@/lib/storage';
 import { generateQRCodeDataURL, downloadQRCodePNG, downloadQRCodePDF, downloadAllQRCodesPDF } from '@/lib/qr-generator';
 import { useToast } from '@/hooks/use-toast';
 import { AdminNav } from '@/components/admin/AdminNav';
@@ -33,11 +32,12 @@ const AdminQRCodes = () => {
   }, []);
 
   const loadQRCodes = async () => {
-    const props = getProperties().filter(p => p.isActive);
-    setProperties(props);
+    const props = await getProperties();
+    const activeProps = props.filter((p: Property) => p.isActive);
+    setProperties(activeProps);
 
     const codes: { [key: string]: string } = {};
-    for (const prop of props) {
+    for (const prop of activeProps) {
       const url = `${baseUrl}/property/${prop.slug}`;
       codes[prop.id] = await generateQRCodeDataURL(url);
     }
@@ -46,7 +46,7 @@ const AdminQRCodes = () => {
   };
 
   const handleDownloadPNG = async (property: Property) => {
-    await downloadQRCodePNG(property, baseUrl);
+    await downloadQRCodePNG(property as any, baseUrl);
     toast({
       title: 'Descarga exitosa',
       description: `QR de ${property.name} descargado como PNG.`,
@@ -54,7 +54,7 @@ const AdminQRCodes = () => {
   };
 
   const handleDownloadPDF = async (property: Property) => {
-    await downloadQRCodePDF(property, baseUrl);
+    await downloadQRCodePDF(property as any, baseUrl);
     toast({
       title: 'Descarga exitosa',
       description: `QR de ${property.name} descargado como PDF.`,
@@ -63,7 +63,7 @@ const AdminQRCodes = () => {
 
   const handleDownloadAll = async () => {
     setDownloadingAll(true);
-    await downloadAllQRCodesPDF(properties, baseUrl);
+    await downloadAllQRCodesPDF(properties as any[], baseUrl);
     toast({
       title: 'Descarga exitosa',
       description: 'Todos los códigos QR han sido descargados en un PDF.',
