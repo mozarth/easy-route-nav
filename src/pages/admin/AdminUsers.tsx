@@ -92,13 +92,33 @@ const AdminUsers = () => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Get profiles
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setUsers((data || []) as UserProfile[]);
+      if (profilesError) throw profilesError;
+
+      // Get all user roles
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+
+      if (rolesError) {
+        console.error('Error loading roles:', rolesError);
+      }
+
+      // Map roles to profiles
+      const usersWithRoles = (profilesData || []).map(profile => {
+        const userRole = rolesData?.find(r => r.user_id === profile.user_id);
+        return {
+          ...profile,
+          role: (userRole?.role || profile.role || 'usuario') as UserRole,
+        };
+      });
+
+      setUsers(usersWithRoles as UserProfile[]);
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
@@ -156,15 +176,32 @@ const AdminUsers = () => {
     try {
       if (editingUser) {
         // Update existing user profile
-        const { error } = await supabase
+        const { error: profileError } = await supabase
           .from('profiles')
           .update({
             full_name: formData.full_name,
-            role: formData.role,
           })
           .eq('id', editingUser.id);
 
-        if (error) throw error;
+        if (profileError) throw profileError;
+
+        // Update role in user_roles table
+        // First delete existing role, then insert new one
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', editingUser.user_id);
+
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: editingUser.user_id,
+            role: formData.role,
+          });
+
+        if (roleError) {
+          console.error('Error updating role:', roleError);
+        }
 
         toast({
           title: 'Usuario actualizado',
@@ -187,6 +224,25 @@ const AdminUsers = () => {
           });
           setSubmitting(false);
           return;
+        }
+
+        // Wait a bit for the user to be created and then insert role
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Get the newly created user profile
+        const { data: newProfile } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('email', formData.email)
+          .maybeSingle();
+
+        if (newProfile?.user_id) {
+          await supabase
+            .from('user_roles')
+            .insert({
+              user_id: newProfile.user_id,
+              role: formData.role,
+            });
         }
 
         toast({
