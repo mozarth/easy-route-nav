@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   MapPin, 
   Clock, 
@@ -21,6 +21,7 @@ import { getProperties, getAccessLogs } from '@/lib/storage';
 import { Property, AccessLog } from '@/types/property';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const { logout } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
   const [recentLogs, setRecentLogs] = useState<AccessLog[]>([]);
@@ -94,13 +95,14 @@ const AdminDashboard = () => {
             <QrCode className="w-5 h-5" />
             Códigos QR
           </Link>
-          <Link 
-            to="/admin/users" 
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors"
+          <button
+            type="button"
+            onClick={() => navigate('/admin/users')}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors w-full"
           >
             <Users className="w-5 h-5" />
             Usuarios
-          </Link>
+          </button>
         </nav>
 
         <div className="absolute bottom-4 left-4 right-4 space-y-2">
@@ -264,6 +266,10 @@ const AdminDashboard = () => {
           <Link to="/admin/qr-codes" className="flex flex-col items-center gap-1 p-2 text-muted-foreground">
             <QrCode className="w-5 h-5" />
             <span className="text-xs">QR</span>
+          </Link>
+          <Link to="/admin/users" className="flex flex-col items-center gap-1 p-2 text-muted-foreground">
+            <Users className="w-5 h-5" />
+            <span className="text-xs">Usuarios</span>
           </Link>
         </nav>
       </main>

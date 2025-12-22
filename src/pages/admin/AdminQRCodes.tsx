@@ -8,6 +8,7 @@ import {
   Image,
   BarChart3,
   QrCode,
+  Users,
   Home,
   LogOut,
   Loader2
@@ -251,6 +252,10 @@ const AdminQRCodes = () => {
           <Link to="/admin/qr-codes" className="flex flex-col items-center gap-1 p-2 text-primary">
             <QrCode className="w-5 h-5" />
             <span className="text-xs">QR</span>
+          </Link>
+          <Link to="/admin/users" className="flex flex-col items-center gap-1 p-2 text-muted-foreground">
+            <Users className="w-5 h-5" />
+            <span className="text-xs">Usuarios</span>
           </Link>
         </nav>
       </main>
