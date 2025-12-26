@@ -11,17 +11,26 @@ import {
   Download,
   QrCode,
   Loader2,
+  BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { getProperties, getAccessLogs, Property, AccessLog } from '@/lib/storage';
 import { AdminNav } from '@/components/admin/AdminNav';
+import { Progress } from '@/components/ui/progress';
+
+interface PropertyScanCount {
+  propertyId: string;
+  propertyName: string;
+  scanCount: number;
+}
 
 const AdminDashboard = () => {
   const { logout } = useAuth();
   const [recentLogs, setRecentLogs] = useState<AccessLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [propertyScans, setPropertyScans] = useState<PropertyScanCount[]>([]);
   const [stats, setStats] = useState({
     totalProperties: 0,
     activeProperties: 0,
@@ -41,6 +50,27 @@ const AdminDashboard = () => {
       
       setRecentLogs(logs.slice(0, 10));
       
+      // Calculate scan counts per property
+      const scanCounts: Record<string, { name: string; count: number }> = {};
+      props.forEach((p: Property) => {
+        scanCounts[p.id] = { name: p.name, count: 0 };
+      });
+      logs.forEach((log: AccessLog) => {
+        if (scanCounts[log.propertyId]) {
+          scanCounts[log.propertyId].count++;
+        }
+      });
+      
+      const sortedScans = Object.entries(scanCounts)
+        .map(([id, data]) => ({
+          propertyId: id,
+          propertyName: data.name,
+          scanCount: data.count,
+        }))
+        .sort((a, b) => b.scanCount - a.scanCount);
+      
+      setPropertyScans(sortedScans);
+      
       setStats({
         totalProperties: props.length,
         activeProperties: props.filter((p: Property) => p.isActive).length,
@@ -53,6 +83,8 @@ const AdminDashboard = () => {
     };
     loadData();
   }, []);
+
+  const maxScans = Math.max(...propertyScans.map(p => p.scanCount), 1);
 
   const statCards = [
     { label: 'Total Propiedades', value: stats.totalProperties, icon: MapPin, color: 'primary' },
@@ -178,6 +210,32 @@ const AdminDashboard = () => {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* QR Scans per Property */}
+            <div className="glass-card p-6 mb-8">
+              <h2 className="font-semibold mb-4 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-primary" />
+                Escaneos QR por Propiedad
+              </h2>
+              {propertyScans.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No hay propiedades registradas.</p>
+              ) : (
+                <div className="space-y-4">
+                  {propertyScans.map((property) => (
+                    <div key={property.propertyId} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium truncate max-w-[70%]">{property.propertyName}</span>
+                        <span className="text-primary font-bold">{property.scanCount}</span>
+                      </div>
+                      <Progress 
+                        value={(property.scanCount / maxScans) * 100} 
+                        className="h-2"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Quick Actions */}
