@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
-export const ProtectedRoute = () => {
+export const UserProtectedRoute = () => {
   const { isAuthenticated, isLoading, profile } = useAuth();
 
   if (isLoading) {
@@ -20,12 +20,12 @@ export const ProtectedRoute = () => {
     return <Navigate to={loginPath} replace />;
   }
 
-  // Only admins can access admin routes
-  if (profile?.role !== 'admin') {
+  // If user is admin, redirect them to admin panel
+  if (profile?.role === 'admin') {
     const pathname = window.location.pathname;
     const lang = pathname.match(/^\/([a-z]{2})(\/|$)/i)?.[1];
-    const userPath = lang ? `/${lang}/user/propiedades` : '/user/propiedades';
-    return <Navigate to={userPath} replace />;
+    const adminPath = lang ? `/${lang}/admin/panel` : '/admin/panel';
+    return <Navigate to={adminPath} replace />;
   }
 
   return <Outlet />;

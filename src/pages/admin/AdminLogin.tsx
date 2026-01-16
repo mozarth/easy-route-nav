@@ -21,7 +21,7 @@ const AdminLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [formError, setFormError] = useState('');
-  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
+  // Note: profile is extracted in the useEffect below after the langPrefix declaration
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -30,11 +30,19 @@ const AdminLogin = () => {
     ? `/${location.pathname.match(/^\/([a-z]{2})(\/|$)/i)![1]}`
     : '';
 
+  const { login, isAuthenticated, isLoading: authLoading, profile } = useAuth();
+
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      navigate(`${langPrefix}/admin/panel`);
+    if (!authLoading && isAuthenticated && profile) {
+      // Redirect based on role
+      if (profile.role === 'admin') {
+        navigate(`${langPrefix}/admin/panel`);
+      } else {
+        // usuarios and porteros go to user properties view
+        navigate(`${langPrefix}/user/propiedades`);
+      }
     }
-  }, [isAuthenticated, authLoading, navigate, langPrefix]);
+  }, [isAuthenticated, authLoading, navigate, langPrefix, profile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +77,7 @@ const AdminLogin = () => {
         title: 'Bienvenido',
         description: 'Has iniciado sesión correctamente',
       });
-      navigate(`${langPrefix}/admin/panel`);
+      // Redirect will happen via useEffect when profile loads
     }
 
     setIsLoading(false);

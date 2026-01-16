@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { UserProtectedRoute } from "@/components/UserProtectedRoute";
 import Index from "./pages/Index";
 import PropertyPage from "./pages/PropertyPage";
 import LoteFinder from "./pages/LoteFinder";
@@ -17,6 +18,8 @@ import AdminQRCodes from "./pages/admin/AdminQRCodes";
 import AdminQRCodesEtapas from "./pages/admin/AdminQRCodesEtapas";
 import AdminQRGenerator from "./pages/admin/AdminQRGenerator";
 import AdminUsers from "./pages/admin/AdminUsers";
+import UserProperties from "./pages/user/UserProperties";
+import UserQRCodes from "./pages/user/UserQRCodes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -81,6 +84,19 @@ const App = () => (
               <Route path="/:lang/admin/usuarios" element={<AdminUsers />} />
               <Route path="/:lang/admin/qr-etapas" element={<AdminQRCodesEtapas />} />
               <Route path="/:lang/admin/generar-qr" element={<AdminQRGenerator />} />
+            </Route>
+
+            {/* Protected User Routes (read-only for usuarios/porteros) */}
+            <Route element={<UserProtectedRoute />}>
+              <Route path="/user/propiedades" element={<UserProperties />} />
+              <Route path="/user/properties" element={<UserProperties />} />
+              <Route path="/user/qr-codes" element={<UserQRCodes />} />
+              <Route path="/user/codigos-qr" element={<UserQRCodes />} />
+
+              <Route path="/:lang/user/propiedades" element={<UserProperties />} />
+              <Route path="/:lang/user/properties" element={<UserProperties />} />
+              <Route path="/:lang/user/qr-codes" element={<UserQRCodes />} />
+              <Route path="/:lang/user/codigos-qr" element={<UserQRCodes />} />
             </Route>
 
             {/* Catch-all */}
