@@ -3,6 +3,7 @@ import {
   BarChart3,
   MapPin,
   Clock,
+  FileText,
   QrCode,
   Users,
   Home,
@@ -24,6 +25,7 @@ const navItems: NavItem[] = [
   { to: '/admin/panel', aliases: ['/admin/dashboard'], label: 'Panel', icon: BarChart3 },
   { to: '/admin/propiedades', aliases: ['/admin/properties'], label: 'Propiedades', icon: MapPin },
   { to: '/admin/historial', aliases: ['/admin/history'], label: 'Historial', icon: Clock },
+  { to: '/admin/reportes', aliases: ['/admin/reports'], label: 'Reportes', icon: FileText },
   { to: '/admin/codigos-qr', aliases: ['/admin/qr-codes'], label: 'Códigos QR', icon: QrCode },
   { to: '/admin/usuarios', aliases: ['/admin/users'], label: 'Usuarios', icon: Users },
 ];

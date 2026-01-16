@@ -12,6 +12,7 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProperties from "./pages/admin/AdminProperties";
 import AdminHistory from "./pages/admin/AdminHistory";
+import AdminReports from "./pages/admin/AdminReports";
 import AdminQRCodes from "./pages/admin/AdminQRCodes";
 import AdminQRCodesEtapas from "./pages/admin/AdminQRCodesEtapas";
 import AdminQRGenerator from "./pages/admin/AdminQRGenerator";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/properties" element={<AdminProperties />} />
               <Route path="/admin/history" element={<AdminHistory />} />
+              <Route path="/admin/reports" element={<AdminReports />} />
               <Route path="/admin/qr-codes" element={<AdminQRCodes />} />
               <Route path="/admin/users" element={<AdminUsers />} />
 
@@ -55,6 +57,7 @@ const App = () => (
               <Route path="/admin/panel" element={<AdminDashboard />} />
               <Route path="/admin/propiedades" element={<AdminProperties />} />
               <Route path="/admin/historial" element={<AdminHistory />} />
+              <Route path="/admin/reportes" element={<AdminReports />} />
               <Route path="/admin/codigos-qr" element={<AdminQRCodes />} />
               <Route path="/admin/usuarios" element={<AdminUsers />} />
               <Route path="/admin/generar-qr" element={<AdminQRGenerator />} />
@@ -66,12 +69,14 @@ const App = () => (
               <Route path="/:lang/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/:lang/admin/properties" element={<AdminProperties />} />
               <Route path="/:lang/admin/history" element={<AdminHistory />} />
+              <Route path="/:lang/admin/reports" element={<AdminReports />} />
               <Route path="/:lang/admin/qr-codes" element={<AdminQRCodes />} />
               <Route path="/:lang/admin/users" element={<AdminUsers />} />
 
               <Route path="/:lang/admin/panel" element={<AdminDashboard />} />
               <Route path="/:lang/admin/propiedades" element={<AdminProperties />} />
               <Route path="/:lang/admin/historial" element={<AdminHistory />} />
+              <Route path="/:lang/admin/reportes" element={<AdminReports />} />
               <Route path="/:lang/admin/codigos-qr" element={<AdminQRCodes />} />
               <Route path="/:lang/admin/usuarios" element={<AdminUsers />} />
               <Route path="/:lang/admin/qr-etapas" element={<AdminQRCodesEtapas />} />
