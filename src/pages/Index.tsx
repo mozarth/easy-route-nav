@@ -1,25 +1,10 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Navigation, ArrowRight, QrCode, Loader2 } from 'lucide-react';
+import { Navigation, QrCode, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/Header';
 import { Features } from '@/components/Features';
-import { PropertyCard } from '@/components/PropertyCard';
-import { getProperties, Property } from '@/lib/storage';
 
 const Index = () => {
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadProperties = async () => {
-      const props = await getProperties();
-      setProperties(props.filter(p => p.isActive));
-      setLoading(false);
-    };
-    loadProperties();
-  }, []);
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -56,12 +41,12 @@ const Index = () => {
                   Panel de Administración
                 </Button>
               </Link>
-              <a href="#properties">
+              <Link to="/admin">
                 <Button variant="outline" size="xl">
-                  Ver Propiedades
-                  <ArrowRight className="w-5 h-5" />
+                  <UserCircle className="w-5 h-5" />
+                  Ingreso Usuarios
                 </Button>
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -69,45 +54,6 @@ const Index = () => {
 
       {/* Features */}
       <Features />
-
-      {/* Properties Section */}
-      <section id="properties" className="py-20 px-4 bg-secondary/30">
-        <div className="container max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-            Propiedades <span className="text-gradient-primary">Disponibles</span>
-          </h2>
-          <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
-            Selecciona una propiedad para ver su ubicación y obtener direcciones
-          </p>
-          
-          {loading && (
-            <div className="text-center py-12">
-              <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
-              <p className="text-muted-foreground">Cargando propiedades...</p>
-            </div>
-          )}
-          
-          {!loading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {properties.map((property, index) => (
-                <div
-                  key={property.id}
-                  className="animate-fade-in-up"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <PropertyCard property={property} />
-                </div>
-              ))}
-            </div>
-          )}
-          
-          {!loading && properties.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No hay propiedades activas disponibles.</p>
-            </div>
-          )}
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="py-8 px-4 border-t border-border/50">
