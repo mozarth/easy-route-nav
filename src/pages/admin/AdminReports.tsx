@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AdminNav } from '@/components/admin/AdminNav';
 import { getProperties, getLotesByPropertyId, Property, PropertyLote } from '@/lib/storage';
 import { exportLotesToCSV, exportLotesToPDF } from '@/lib/export-utils';
@@ -25,6 +26,7 @@ const AdminReports = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   const [lotes, setLotes] = useState<PropertyLote[]>([]);
+  const [selectedLoteIds, setSelectedLoteIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [loadingLotes, setLoadingLotes] = useState(false);
   const { toast } = useToast();
@@ -38,6 +40,7 @@ const AdminReports = () => {
       loadLotes(selectedPropertyId);
     } else {
       setLotes([]);
+      setSelectedLoteIds(new Set());
     }
   }, [selectedPropertyId]);
 
@@ -62,6 +65,8 @@ const AdminReports = () => {
     try {
       const data = await getLotesByPropertyId(propertyId);
       setLotes(data);
+      // Select all by default
+      setSelectedLoteIds(new Set(data.map(l => l.id)));
     } catch (error) {
       console.error('Error loading lotes:', error);
       toast({
@@ -76,36 +81,58 @@ const AdminReports = () => {
 
   const selectedProperty = properties.find(p => p.id === selectedPropertyId);
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedLoteIds(new Set(lotes.map(l => l.id)));
+    } else {
+      setSelectedLoteIds(new Set());
+    }
+  };
+
+  const handleSelectLote = (loteId: string, checked: boolean) => {
+    const newSelected = new Set(selectedLoteIds);
+    if (checked) {
+      newSelected.add(loteId);
+    } else {
+      newSelected.delete(loteId);
+    }
+    setSelectedLoteIds(newSelected);
+  };
+
+  const isAllSelected = lotes.length > 0 && selectedLoteIds.size === lotes.length;
+  const isIndeterminate = selectedLoteIds.size > 0 && selectedLoteIds.size < lotes.length;
+  const selectedLotes = lotes.filter(l => selectedLoteIds.has(l.id));
+
   const handleExportCSV = () => {
-    if (!selectedProperty || lotes.length === 0) {
+    if (!selectedProperty || selectedLotes.length === 0) {
       toast({
         title: 'Sin datos',
-        description: 'Selecciona una propiedad con lotes para exportar',
+        description: 'Selecciona al menos un lote para exportar',
         variant: 'destructive',
       });
       return;
     }
-    exportLotesToCSV(lotes, selectedProperty.name);
+    exportLotesToCSV(selectedLotes, selectedProperty.name);
     toast({
       title: 'Exportación exitosa',
-      description: 'El archivo CSV se ha descargado',
+      description: `Se exportaron ${selectedLotes.length} lotes/casas a CSV`,
     });
   };
 
   const handleExportPDF = async () => {
-    if (!selectedProperty || lotes.length === 0) {
+    if (!selectedProperty || selectedLotes.length === 0) {
       toast({
         title: 'Sin datos',
-        description: 'Selecciona una propiedad con lotes para exportar',
+        description: 'Selecciona al menos un lote para exportar',
         variant: 'destructive',
       });
       return;
     }
     try {
-      await exportLotesToPDF(lotes, selectedProperty.name);
+      await exportLotesToPDF(selectedLotes, selectedProperty.name);
       toast({
         title: 'Exportación exitosa',
-        description: 'El archivo PDF se ha descargado',
+        description: `Se exportaron ${selectedLotes.length} lotes/casas a PDF`,
       });
     } catch (error) {
       console.error('Error exporting PDF:', error);
@@ -165,17 +192,17 @@ const AdminReports = () => {
                 <Button
                   variant="outline"
                   onClick={handleExportCSV}
-                  disabled={!selectedPropertyId || lotes.length === 0}
+                  disabled={!selectedPropertyId || selectedLotes.length === 0}
                 >
                   <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  Exportar Excel
+                  Exportar Excel ({selectedLotes.length})
                 </Button>
                 <Button
                   onClick={handleExportPDF}
-                  disabled={!selectedPropertyId || lotes.length === 0}
+                  disabled={!selectedPropertyId || selectedLotes.length === 0}
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Exportar PDF
+                  Exportar PDF ({selectedLotes.length})
                 </Button>
               </div>
             </div>
@@ -208,6 +235,21 @@ const AdminReports = () => {
                       <TableHead>Latitud</TableHead>
                       <TableHead>Longitud</TableHead>
                       <TableHead className="w-32">Imagen</TableHead>
+                      <TableHead className="w-20 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Checkbox
+                            checked={isAllSelected}
+                            ref={(el) => {
+                              if (el) {
+                                (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = isIndeterminate;
+                              }
+                            }}
+                            onCheckedChange={handleSelectAll}
+                            aria-label="Seleccionar todos"
+                          />
+                          <span className="text-xs">Todos</span>
+                        </div>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -236,6 +278,13 @@ const AdminReports = () => {
                             <span className="text-muted-foreground text-sm">Sin imagen</span>
                           )}
                         </TableCell>
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={selectedLoteIds.has(lote.id)}
+                            onCheckedChange={(checked) => handleSelectLote(lote.id, checked as boolean)}
+                            aria-label={`Seleccionar lote ${lote.numero}`}
+                          />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -243,6 +292,9 @@ const AdminReports = () => {
                 <div className="p-4 border-t border-border bg-muted/30">
                   <p className="text-sm text-muted-foreground">
                     Total: <span className="font-medium text-foreground">{lotes.length}</span> lotes/casas
+                    {selectedLotes.length !== lotes.length && (
+                      <> · <span className="font-medium text-primary">{selectedLotes.length}</span> seleccionados</>
+                    )}
                   </p>
                 </div>
               </>
