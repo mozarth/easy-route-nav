@@ -95,12 +95,18 @@ const PropertyPage = () => {
     await handleLoteSelect(lote.id);
   };
 
-  const abrirGoogleMaps = () => {
+const abrirGoogleMaps = () => {
     if (loteEncontrado && property) {
-      // Use property coordinates as entrance/origin
       const origen = `${property.latitude},${property.longitude}`;
       const destino = `${loteEncontrado.latitude},${loteEncontrado.longitude}`;
       const url = `https://www.google.com/maps/dir/${origen}/${destino}`;
+      window.open(url, '_blank');
+    }
+  };
+
+  const abrirWaze = () => {
+    if (loteEncontrado) {
+      const url = `https://waze.com/ul?ll=${loteEncontrado.latitude},${loteEncontrado.longitude}&navigate=yes`;
       window.open(url, '_blank');
     }
   };
@@ -125,6 +131,12 @@ const PropertyPage = () => {
   const openGoogleMapsToProperty = () => {
     if (!property) return;
     const url = `https://www.google.com/maps/dir/?api=1&destination=${property.latitude},${property.longitude}`;
+    window.open(url, '_blank');
+  };
+
+  const openWazeToProperty = () => {
+    if (!property) return;
+    const url = `https://waze.com/ul?ll=${property.latitude},${property.longitude}&navigate=yes`;
     window.open(url, '_blank');
   };
 
@@ -304,6 +316,15 @@ const PropertyPage = () => {
                       Ver Ruta en Google Maps
                     </Button>
 
+                    <Button
+                      onClick={abrirWaze}
+                      className="w-full h-12 text-base bg-[#33CCFF] hover:bg-[#29B8E8] text-black"
+                      size="lg"
+                    >
+                      <Navigation className="w-5 h-5 mr-2" />
+                      Ver Ruta en Waze
+                    </Button>
+
                     {qrCodeUrl && (
                       <Button onClick={downloadQR} variant="outline" className="w-full">
                         <Download className="w-4 h-4 mr-2" />
@@ -329,14 +350,25 @@ const PropertyPage = () => {
                 <p className="text-foreground mb-4 text-sm">{property.description}</p>
               )}
 
-              <Button
-                onClick={openGoogleMapsToProperty}
-                className="w-full h-12 text-base bg-green-600 hover:bg-green-700"
-                size="lg"
-              >
-                <Navigation className="w-5 h-5 mr-2" />
-                Abrir en Google Maps
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  onClick={openGoogleMapsToProperty}
+                  className="w-full h-12 text-base bg-green-600 hover:bg-green-700"
+                  size="lg"
+                >
+                  <Navigation className="w-5 h-5 mr-2" />
+                  Abrir en Google Maps
+                </Button>
+
+                <Button
+                  onClick={openWazeToProperty}
+                  className="w-full h-12 text-base bg-[#33CCFF] hover:bg-[#29B8E8] text-black"
+                  size="lg"
+                >
+                  <Navigation className="w-5 h-5 mr-2" />
+                  Abrir en Waze
+                </Button>
+              </div>
             </div>
           )}
         </div>
