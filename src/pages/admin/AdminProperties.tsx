@@ -163,23 +163,27 @@ const AdminProperties = () => {
       mapImageUrl: formData.mapImageUrl || undefined,
     };
 
-    const result = await saveProperty(propertyData);
-    setSaving(false);
-    
-    if (result) {
-      await loadProperties();
-      resetForm();
-      
+    try {
+      const result = await saveProperty(propertyData);
+
+      if (result) {
+        await loadProperties();
+        resetForm();
+
+        toast({
+          title: editingProperty ? 'Propiedad actualizada' : 'Propiedad creada',
+          description: `${propertyData.name} ha sido ${editingProperty ? 'actualizada' : 'creada'} exitosamente.`,
+        });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error desconocido';
       toast({
-        title: editingProperty ? 'Propiedad actualizada' : 'Propiedad creada',
-        description: `${propertyData.name} ha sido ${editingProperty ? 'actualizada' : 'creada'} exitosamente.`,
-      });
-    } else {
-      toast({
-        title: 'Error',
-        description: 'No se pudo guardar la propiedad. Verifica tus permisos.',
+        title: 'Error al guardar',
+        description: message,
         variant: 'destructive',
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -364,49 +368,50 @@ const AdminProperties = () => {
   const handleSaveLote = async (propertyId: string) => {
     setSavingLote(true);
 
-    // Prepare checkpoints array
-    const checkpointsToSave = checkpointsFormData
-      .filter((cp) => cp.latitude && cp.longitude)
-      .map((cp, idx) => ({
-        latitude: parseFloat(cp.latitude),
-        longitude: parseFloat(cp.longitude),
-        orden: idx + 1,
-      }));
+    try {
+      // Prepare checkpoints array
+      const checkpointsToSave = checkpointsFormData
+        .filter((cp) => cp.latitude && cp.longitude)
+        .map((cp, idx) => ({
+          latitude: parseFloat(cp.latitude),
+          longitude: parseFloat(cp.longitude),
+          orden: idx + 1,
+        }));
 
-    const result = await saveLote(
-      {
-        id: editingLote?.id,
-        propertyId,
-        numero: loteFormData.numero,
-        tipo: loteFormData.tipo,
-        latitude: parseFloat(loteFormData.latitude),
-        longitude: parseFloat(loteFormData.longitude),
-        imageUrl: loteFormData.imageUrl || null,
-        // Legacy single checkpoint fields - use first checkpoint if available
-        checkpointLatitude: checkpointsToSave.length > 0 ? checkpointsToSave[0].latitude : null,
-        checkpointLongitude: checkpointsToSave.length > 0 ? checkpointsToSave[0].longitude : null,
-      },
-      checkpointsToSave
-    );
+      const result = await saveLote(
+        {
+          id: editingLote?.id,
+          propertyId,
+          numero: loteFormData.numero,
+          tipo: loteFormData.tipo,
+          latitude: parseFloat(loteFormData.latitude),
+          longitude: parseFloat(loteFormData.longitude),
+          imageUrl: loteFormData.imageUrl || null,
+          // Legacy single checkpoint fields - use first checkpoint if available
+          checkpointLatitude: checkpointsToSave.length > 0 ? checkpointsToSave[0].latitude : null,
+          checkpointLongitude: checkpointsToSave.length > 0 ? checkpointsToSave[0].longitude : null,
+        },
+        checkpointsToSave
+      );
 
-    setSavingLote(false);
-
-    if (result) {
-      const lotes = await getLotesByPropertyId(propertyId);
-      setPropertyLotes(prev => ({ ...prev, [propertyId]: lotes }));
-      resetLoteForm();
+      if (result) {
+        const lotes = await getLotesByPropertyId(propertyId);
+        setPropertyLotes(prev => ({ ...prev, [propertyId]: lotes }));
+        resetLoteForm();
+        toast({
+          title: editingLote ? 'Lote actualizado' : 'Lote agregado',
+          description: `${loteFormData.tipo === 'casa' ? 'Casa' : 'Lote'} #${loteFormData.numero} ${editingLote ? 'actualizado' : 'agregado'} exitosamente.`,
+        });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error desconocido';
       toast({
-        title: editingLote ? 'Lote actualizado' : 'Lote agregado',
-        description: `${loteFormData.tipo === 'casa' ? 'Casa' : 'Lote'} #${loteFormData.numero} ${editingLote ? 'actualizado' : 'agregado'} exitosamente.`,
-      });
-    } else {
-      toast({
-        title: 'Error',
-        description: editingLote
-          ? 'No se pudo actualizar el lote. Verifica tus permisos.'
-          : 'No se pudo agregar el lote. Verifica que no exista ya.',
+        title: 'Error al guardar lote',
+        description: message,
         variant: 'destructive',
       });
+    } finally {
+      setSavingLote(false);
     }
   };
 
@@ -943,6 +948,7 @@ const AdminProperties = () => {
                         <div className="flex gap-2 mt-4">
                           <Button
                             size="sm"
+                            type="button"
                             onClick={() => handleSaveLote(property.id)}
                             disabled={
                               savingLote ||

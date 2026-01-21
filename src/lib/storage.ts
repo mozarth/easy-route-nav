@@ -181,7 +181,7 @@ export const saveProperty = async (property: Partial<Property> & { name: string;
 
     if (error) {
       console.error('Error updating property:', error);
-      return null;
+      throw new Error(error.message);
     }
 
     return transformProperty(data);
@@ -195,7 +195,7 @@ export const saveProperty = async (property: Partial<Property> & { name: string;
 
     if (error) {
       console.error('Error inserting property:', error);
-      return null;
+      throw new Error(error.message);
     }
 
     return transformProperty(data);
@@ -340,7 +340,7 @@ export const saveCheckpointsForLote = async (
 
   if (deleteError) {
     console.error('Error deleting old checkpoints:', deleteError);
-    return false;
+    throw new Error(deleteError.message);
   }
 
   // Insert new ones if any
@@ -358,7 +358,7 @@ export const saveCheckpointsForLote = async (
 
     if (insertError) {
       console.error('Error inserting checkpoints:', insertError);
-      return false;
+      throw new Error(insertError.message);
     }
   }
 
@@ -503,7 +503,7 @@ export const saveLote = async (
 
     if (error) {
       console.error('Error updating lote:', error);
-      return null;
+      throw new Error(error.message);
     }
 
     // Save checkpoints
@@ -533,7 +533,7 @@ export const saveLote = async (
 
     if (error) {
       console.error('Error inserting lote:', error);
-      return null;
+      throw new Error(error.message);
     }
 
     // Save checkpoints for new lote
