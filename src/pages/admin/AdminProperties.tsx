@@ -16,6 +16,7 @@ import {
   Upload,
   Image as ImageIcon,
   ExternalLink,
+  Route,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,9 +36,16 @@ import {
   PropertyLote,
   uploadLoteImage,
   uploadPropertyMapImage,
+  LoteCheckpoint,
 } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { AdminNav } from '@/components/admin/AdminNav';
+
+interface CheckpointFormData {
+  latitude: string;
+  longitude: string;
+  orden: number;
+}
 
 const AdminProperties = () => {
   const { logout } = useAuth();
@@ -72,9 +80,8 @@ const AdminProperties = () => {
     latitude: '',
     longitude: '',
     imageUrl: '',
-    checkpointLatitude: '',
-    checkpointLongitude: '',
   });
+  const [checkpointsFormData, setCheckpointsFormData] = useState<CheckpointFormData[]>([]);
   const [savingLote, setSavingLote] = useState(false);
   const [uploadingLoteImage, setUploadingLoteImage] = useState(false);
 
@@ -266,9 +273,8 @@ const AdminProperties = () => {
       latitude: '',
       longitude: '',
       imageUrl: '',
-      checkpointLatitude: '',
-      checkpointLongitude: '',
     });
+    setCheckpointsFormData([]);
     setShowLoteForm(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -281,9 +287,8 @@ const AdminProperties = () => {
       latitude: '',
       longitude: '',
       imageUrl: '',
-      checkpointLatitude: '',
-      checkpointLongitude: '',
     });
+    setCheckpointsFormData([]);
     setShowLoteForm(propertyId);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -297,26 +302,92 @@ const AdminProperties = () => {
       latitude: lote.latitude.toString(),
       longitude: lote.longitude.toString(),
       imageUrl: lote.imageUrl || '',
-      checkpointLatitude: lote.checkpointLatitude?.toString() || '',
-      checkpointLongitude: lote.checkpointLongitude?.toString() || '',
     });
+    // Load existing checkpoints into form
+    const existingCheckpoints: CheckpointFormData[] = [];
+    // Include legacy single checkpoint if present
+    if (lote.checkpointLatitude && lote.checkpointLongitude) {
+      existingCheckpoints.push({
+        latitude: lote.checkpointLatitude.toString(),
+        longitude: lote.checkpointLongitude.toString(),
+        orden: 1,
+      });
+    }
+    // Include multiple checkpoints
+    if (lote.checkpoints && lote.checkpoints.length > 0) {
+      lote.checkpoints.forEach((cp) => {
+        existingCheckpoints.push({
+          latitude: cp.latitude.toString(),
+          longitude: cp.longitude.toString(),
+          orden: cp.orden,
+        });
+      });
+    }
+    // Deduplicate by coordinates (in case legacy and new overlap)
+    const uniqueCheckpoints: CheckpointFormData[] = [];
+    const seen = new Set<string>();
+    existingCheckpoints.forEach((cp) => {
+      const key = `${cp.latitude},${cp.longitude}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueCheckpoints.push(cp);
+      }
+    });
+    // Re-order
+    uniqueCheckpoints.sort((a, b) => a.orden - b.orden);
+    uniqueCheckpoints.forEach((cp, idx) => (cp.orden = idx + 1));
+    setCheckpointsFormData(uniqueCheckpoints);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const addCheckpoint = () => {
+    setCheckpointsFormData((prev) => [
+      ...prev,
+      { latitude: '', longitude: '', orden: prev.length + 1 },
+    ]);
+  };
+
+  const removeCheckpoint = (index: number) => {
+    setCheckpointsFormData((prev) => {
+      const updated = prev.filter((_, i) => i !== index);
+      // Re-order
+      return updated.map((cp, idx) => ({ ...cp, orden: idx + 1 }));
+    });
+  };
+
+  const updateCheckpoint = (index: number, field: 'latitude' | 'longitude', value: string) => {
+    setCheckpointsFormData((prev) =>
+      prev.map((cp, i) => (i === index ? { ...cp, [field]: value } : cp))
+    );
   };
 
   const handleSaveLote = async (propertyId: string) => {
     setSavingLote(true);
 
-    const result = await saveLote({
-      id: editingLote?.id,
-      propertyId,
-      numero: loteFormData.numero,
-      tipo: loteFormData.tipo,
-      latitude: parseFloat(loteFormData.latitude),
-      longitude: parseFloat(loteFormData.longitude),
-      imageUrl: loteFormData.imageUrl || null,
-      checkpointLatitude: loteFormData.checkpointLatitude ? parseFloat(loteFormData.checkpointLatitude) : null,
-      checkpointLongitude: loteFormData.checkpointLongitude ? parseFloat(loteFormData.checkpointLongitude) : null,
-    });
+    // Prepare checkpoints array
+    const checkpointsToSave = checkpointsFormData
+      .filter((cp) => cp.latitude && cp.longitude)
+      .map((cp, idx) => ({
+        latitude: parseFloat(cp.latitude),
+        longitude: parseFloat(cp.longitude),
+        orden: idx + 1,
+      }));
+
+    const result = await saveLote(
+      {
+        id: editingLote?.id,
+        propertyId,
+        numero: loteFormData.numero,
+        tipo: loteFormData.tipo,
+        latitude: parseFloat(loteFormData.latitude),
+        longitude: parseFloat(loteFormData.longitude),
+        imageUrl: loteFormData.imageUrl || null,
+        // Legacy single checkpoint fields - use first checkpoint if available
+        checkpointLatitude: checkpointsToSave.length > 0 ? checkpointsToSave[0].latitude : null,
+        checkpointLongitude: checkpointsToSave.length > 0 ? checkpointsToSave[0].longitude : null,
+      },
+      checkpointsToSave
+    );
 
     setSavingLote(false);
 
@@ -378,6 +449,16 @@ const AdminProperties = () => {
         });
       }
     }
+  };
+
+  const getCheckpointCount = (lote: PropertyLote): number => {
+    let count = 0;
+    if (lote.checkpoints && lote.checkpoints.length > 0) {
+      count = lote.checkpoints.length;
+    } else if (lote.checkpointLatitude && lote.checkpointLongitude) {
+      count = 1;
+    }
+    return count;
   };
 
   return (
@@ -676,7 +757,7 @@ const AdminProperties = () => {
                             />
                           </div>
                           <div>
-                            <label className="text-sm font-medium mb-1 block">Latitud *</label>
+                            <label className="text-sm font-medium mb-1 block">Latitud Destino *</label>
                             <Input
                               type="number"
                               step="any"
@@ -687,13 +768,13 @@ const AdminProperties = () => {
                             />
                           </div>
                           <div>
-                            <label className="text-sm font-medium mb-1 block">Longitud *</label>
+                            <label className="text-sm font-medium mb-1 block">Longitud Destino *</label>
                             <Input
                               type="number"
                               step="any"
                               value={loteFormData.longitude}
                               onChange={(e) => setLoteFormData(prev => ({ ...prev, longitude: e.target.value }))}
-                            placeholder="-75.4885"
+                              placeholder="-75.4885"
                               required
                             />
                           </div>
@@ -709,53 +790,95 @@ const AdminProperties = () => {
                               className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
                             >
                               <ExternalLink className="w-4 h-4" />
-                              Verificar coordenadas en Google Maps
+                              Verificar coordenadas destino en Google Maps
                             </a>
                           </div>
                         )}
 
-                        {/* Checkpoint / Punto de Control */}
+                        {/* Multiple Checkpoints Section */}
                         <div className="mt-4 p-3 border border-dashed border-border rounded-lg bg-muted/30">
-                          <label className="text-sm font-medium mb-2 block flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-orange-500" />
-                            Punto de Control (opcional)
-                          </label>
-                          <p className="text-xs text-muted-foreground mb-3">
-                            Si se especifica, la ruta pasará obligatoriamente por este punto antes de llegar al destino final.
-                          </p>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="text-xs font-medium mb-1 block">Latitud</label>
-                              <Input
-                                type="number"
-                                step="any"
-                                value={loteFormData.checkpointLatitude}
-                                onChange={(e) => setLoteFormData(prev => ({ ...prev, checkpointLatitude: e.target.value }))}
-                                placeholder="6.1082"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs font-medium mb-1 block">Longitud</label>
-                              <Input
-                                type="number"
-                                step="any"
-                                value={loteFormData.checkpointLongitude}
-                                onChange={(e) => setLoteFormData(prev => ({ ...prev, checkpointLongitude: e.target.value }))}
-                                placeholder="-75.4873"
-                              />
-                            </div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-sm font-medium flex items-center gap-2">
+                              <Route className="w-4 h-4 text-orange-500" />
+                              Puntos de Control ({checkpointsFormData.length})
+                            </label>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={addCheckpoint}
+                            >
+                              <Plus className="w-3 h-3 mr-1" />
+                              Agregar Punto
+                            </Button>
                           </div>
-                          {loteFormData.checkpointLatitude && loteFormData.checkpointLongitude && (
-                            <div className="mt-2">
-                              <a
-                                href={`https://www.google.com/maps?q=${loteFormData.checkpointLatitude},${loteFormData.checkpointLongitude}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 text-xs text-orange-600 hover:underline"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                Verificar punto de control
-                              </a>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            La ruta pasará por estos puntos en orden antes de llegar al destino final.
+                          </p>
+
+                          {checkpointsFormData.length === 0 ? (
+                            <p className="text-xs text-muted-foreground text-center py-3">
+                              No hay puntos de control. La ruta irá directamente al destino.
+                            </p>
+                          ) : (
+                            <div className="space-y-3">
+                              {checkpointsFormData.map((cp, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-start gap-2 p-2 bg-background rounded-md border border-border"
+                                >
+                                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold mt-1">
+                                    {index + 1}
+                                  </div>
+                                  <div className="flex-1 grid grid-cols-2 gap-2">
+                                    <div>
+                                      <label className="text-xs font-medium mb-1 block">Latitud</label>
+                                      <Input
+                                        type="number"
+                                        step="any"
+                                        value={cp.latitude}
+                                        onChange={(e) => updateCheckpoint(index, 'latitude', e.target.value)}
+                                        placeholder="6.1082"
+                                        className="h-8 text-sm"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-xs font-medium mb-1 block">Longitud</label>
+                                      <Input
+                                        type="number"
+                                        step="any"
+                                        value={cp.longitude}
+                                        onChange={(e) => updateCheckpoint(index, 'longitude', e.target.value)}
+                                        placeholder="-75.4873"
+                                        className="h-8 text-sm"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col gap-1 mt-1">
+                                    {cp.latitude && cp.longitude && (
+                                      <a
+                                        href={`https://www.google.com/maps?q=${cp.latitude},${cp.longitude}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-orange-600 hover:text-orange-700"
+                                        title="Ver en mapa"
+                                      >
+                                        <ExternalLink className="w-4 h-4" />
+                                      </a>
+                                    )}
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-6 w-6"
+                                      onClick={() => removeCheckpoint(index)}
+                                      title="Eliminar punto"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
@@ -857,10 +980,10 @@ const AdminProperties = () => {
                               <p className="text-xs text-muted-foreground">
                                 {lote.latitude.toFixed(4)}, {lote.longitude.toFixed(4)}
                               </p>
-                              {lote.checkpointLatitude && lote.checkpointLongitude && (
+                              {getCheckpointCount(lote) > 0 && (
                                 <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
-                                  <MapPin className="w-3.5 h-3.5" />
-                                  Con punto de control
+                                  <Route className="w-3.5 h-3.5" />
+                                  {getCheckpointCount(lote)} punto{getCheckpointCount(lote) > 1 ? 's' : ''} de control
                                 </p>
                               )}
                               {lote.imageUrl ? (

@@ -17,6 +17,15 @@ export interface Property {
   updatedAt: Date;
 }
 
+export interface LoteCheckpoint {
+  id: string;
+  loteId: string;
+  latitude: number;
+  longitude: number;
+  orden: number;
+  createdAt: Date;
+}
+
 export interface PropertyLote {
   id: string;
   propertyId: string;
@@ -28,6 +37,7 @@ export interface PropertyLote {
   customRouteUrl?: string | null;
   checkpointLatitude?: number | null;
   checkpointLongitude?: number | null;
+  checkpoints?: LoteCheckpoint[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,8 +78,18 @@ const transformAccessLog = (row: any): AccessLog => ({
   userAgent: row.user_agent,
 });
 
+// Transform checkpoint row
+const transformCheckpoint = (row: any): LoteCheckpoint => ({
+  id: row.id,
+  loteId: row.lote_id,
+  latitude: row.latitude,
+  longitude: row.longitude,
+  orden: row.orden,
+  createdAt: new Date(row.created_at),
+});
+
 // Transform Supabase row to PropertyLote
-const transformPropertyLote = (row: any): PropertyLote => ({
+const transformPropertyLote = (row: any, checkpoints?: LoteCheckpoint[]): PropertyLote => ({
   id: row.id,
   propertyId: row.property_id,
   numero: row.numero,
@@ -80,6 +100,7 @@ const transformPropertyLote = (row: any): PropertyLote => ({
   customRouteUrl: row.custom_route_url,
   checkpointLatitude: row.checkpoint_latitude,
   checkpointLongitude: row.checkpoint_longitude,
+  checkpoints: checkpoints || [],
   createdAt: new Date(row.created_at),
   updatedAt: new Date(row.updated_at),
 });
@@ -288,9 +309,78 @@ export const clearAccessLogs = async (): Promise<boolean> => {
   return true;
 };
 
+// ============ LOTE CHECKPOINTS ============
+
+// Get checkpoints by lote ID
+export const getCheckpointsByLoteId = async (loteId: string): Promise<LoteCheckpoint[]> => {
+  const { data, error } = await supabase
+    .from('lote_checkpoints')
+    .select('*')
+    .eq('lote_id', loteId)
+    .order('orden', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching checkpoints:', error);
+    return [];
+  }
+
+  return (data || []).map(transformCheckpoint);
+};
+
+// Save checkpoints for a lote (replaces all existing)
+export const saveCheckpointsForLote = async (
+  loteId: string,
+  checkpoints: Array<{ latitude: number; longitude: number; orden: number }>
+): Promise<boolean> => {
+  // Delete existing checkpoints
+  const { error: deleteError } = await supabase
+    .from('lote_checkpoints')
+    .delete()
+    .eq('lote_id', loteId);
+
+  if (deleteError) {
+    console.error('Error deleting old checkpoints:', deleteError);
+    return false;
+  }
+
+  // Insert new ones if any
+  if (checkpoints.length > 0) {
+    const { error: insertError } = await supabase
+      .from('lote_checkpoints')
+      .insert(
+        checkpoints.map((cp) => ({
+          lote_id: loteId,
+          latitude: cp.latitude,
+          longitude: cp.longitude,
+          orden: cp.orden,
+        }))
+      );
+
+    if (insertError) {
+      console.error('Error inserting checkpoints:', insertError);
+      return false;
+    }
+  }
+
+  return true;
+};
+
+// Generate custom route URL with multiple waypoints
+export const generateCustomRouteUrl = (
+  origin: { latitude: number; longitude: number },
+  destination: { latitude: number; longitude: number },
+  waypoints: Array<{ latitude: number; longitude: number }>
+): string => {
+  const waypointsStr = waypoints
+    .map((wp) => `${wp.latitude},${wp.longitude}`)
+    .join('|');
+
+  return `https://www.google.com/maps/dir/?api=1&origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&waypoints=${waypointsStr}&travelmode=driving`;
+};
+
 // ============ PROPERTY LOTES ============
 
-// Get lotes by property ID
+// Get lotes by property ID (includes checkpoints)
 export const getLotesByPropertyId = async (propertyId: string): Promise<PropertyLote[]> => {
   const { data, error } = await supabase
     .from('property_lotes')
@@ -303,10 +393,49 @@ export const getLotesByPropertyId = async (propertyId: string): Promise<Property
     return [];
   }
 
-  return (data || []).map(transformPropertyLote);
+  // Fetch checkpoints for all lotes
+  const loteIds = (data || []).map((l) => l.id);
+  let checkpointsMap: Record<string, LoteCheckpoint[]> = {};
+
+  if (loteIds.length > 0) {
+    const { data: checkpointsData } = await supabase
+      .from('lote_checkpoints')
+      .select('*')
+      .in('lote_id', loteIds)
+      .order('orden', { ascending: true });
+
+    if (checkpointsData) {
+      checkpointsData.forEach((cp) => {
+        const checkpoint = transformCheckpoint(cp);
+        if (!checkpointsMap[cp.lote_id]) {
+          checkpointsMap[cp.lote_id] = [];
+        }
+        checkpointsMap[cp.lote_id].push(checkpoint);
+      });
+    }
+  }
+
+  return (data || []).map((row) => transformPropertyLote(row, checkpointsMap[row.id] || []));
 };
 
-// Save lote (insert or update)
+// Get single lote with checkpoints
+export const getLoteById = async (loteId: string): Promise<PropertyLote | null> => {
+  const { data, error } = await supabase
+    .from('property_lotes')
+    .select('*')
+    .eq('id', loteId)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error('Error fetching lote:', error);
+    return null;
+  }
+
+  const checkpoints = await getCheckpointsByLoteId(loteId);
+  return transformPropertyLote(data, checkpoints);
+};
+
+// Save lote (insert or update) with checkpoints
 export const saveLote = async (
   lote: Partial<PropertyLote> & {
     propertyId: string;
@@ -314,22 +443,43 @@ export const saveLote = async (
     tipo: 'lote' | 'casa';
     latitude: number;
     longitude: number;
-  }
+  },
+  checkpoints?: Array<{ latitude: number; longitude: number; orden: number }>
 ): Promise<PropertyLote | null> => {
-  let customRouteUrl: string | null = null;
+  // Get property coordinates for route URL generation
+  const { data: propData } = await supabase
+    .from('properties')
+    .select('latitude, longitude')
+    .eq('id', lote.propertyId)
+    .single();
 
-  // If checkpoint is set, auto-generate the custom route URL
+  // Calculate custom route URL with all checkpoints (both legacy single + new multiple)
+  let customRouteUrl: string | null = null;
+  const allWaypoints: Array<{ latitude: number; longitude: number }> = [];
+
+  // Add legacy single checkpoint if provided
   if (lote.checkpointLatitude && lote.checkpointLongitude) {
-    // We need property's origin coordinates - fetch them
-    const { data: propData } = await supabase
-      .from('properties')
-      .select('latitude, longitude')
-      .eq('id', lote.propertyId)
-      .single();
-    
-    if (propData) {
-      customRouteUrl = `https://www.google.com/maps/dir/?api=1&origin=${propData.latitude},${propData.longitude}&destination=${lote.latitude},${lote.longitude}&waypoints=${lote.checkpointLatitude},${lote.checkpointLongitude}&travelmode=driving`;
-    }
+    allWaypoints.push({
+      latitude: lote.checkpointLatitude,
+      longitude: lote.checkpointLongitude,
+    });
+  }
+
+  // Add multiple checkpoints if provided
+  if (checkpoints && checkpoints.length > 0) {
+    checkpoints
+      .sort((a, b) => a.orden - b.orden)
+      .forEach((cp) => {
+        allWaypoints.push({ latitude: cp.latitude, longitude: cp.longitude });
+      });
+  }
+
+  if (propData && allWaypoints.length > 0) {
+    customRouteUrl = generateCustomRouteUrl(
+      { latitude: propData.latitude, longitude: propData.longitude },
+      { latitude: lote.latitude, longitude: lote.longitude },
+      allWaypoints
+    );
   }
 
   if (lote.id) {
@@ -356,7 +506,13 @@ export const saveLote = async (
       return null;
     }
 
-    return transformPropertyLote(data);
+    // Save checkpoints
+    if (checkpoints) {
+      await saveCheckpointsForLote(lote.id, checkpoints);
+    }
+
+    const savedCheckpoints = await getCheckpointsByLoteId(lote.id);
+    return transformPropertyLote(data, savedCheckpoints);
   } else {
     // Insert
     const { data, error } = await supabase
@@ -380,11 +536,17 @@ export const saveLote = async (
       return null;
     }
 
-    return transformPropertyLote(data);
+    // Save checkpoints for new lote
+    if (checkpoints && checkpoints.length > 0) {
+      await saveCheckpointsForLote(data.id, checkpoints);
+    }
+
+    const savedCheckpoints = await getCheckpointsByLoteId(data.id);
+    return transformPropertyLote(data, savedCheckpoints);
   }
 };
 
-// Delete lote
+// Delete lote (checkpoints are auto-deleted via CASCADE)
 export const deleteLote = async (id: string): Promise<boolean> => {
   const { error } = await supabase
     .from('property_lotes')
@@ -458,4 +620,3 @@ export const uploadPropertyMapImage = async (args: {
     return null;
   }
 };
-
