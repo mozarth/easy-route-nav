@@ -49,6 +49,41 @@ export type Database = {
           },
         ]
       }
+      lote_checkpoints: {
+        Row: {
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          lote_id: string
+          orden: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          lote_id: string
+          orden?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          lote_id?: string
+          orden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lote_checkpoints_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "property_lotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
