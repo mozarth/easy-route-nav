@@ -15,6 +15,7 @@ import {
   ChevronUp,
   Upload,
   Image as ImageIcon,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -682,13 +683,28 @@ const AdminProperties = () => {
                               step="any"
                               value={loteFormData.longitude}
                               onChange={(e) => setLoteFormData(prev => ({ ...prev, longitude: e.target.value }))}
-                              placeholder="-75.4885"
+                            placeholder="-75.4885"
                               required
                             />
                           </div>
                         </div>
 
-                        <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
+                        {/* Verify coordinates link */}
+                        {loteFormData.latitude && loteFormData.longitude && (
+                          <div className="mt-3">
+                            <a
+                              href={`https://www.google.com/maps?q=${loteFormData.latitude},${loteFormData.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              Verificar coordenadas en Google Maps
+                            </a>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start mt-3">
                           <div className="lg:col-span-2">
                             <label className="text-sm font-medium mb-1 block">Imagen (opcional)</label>
                             <div className="flex flex-wrap items-center gap-2">
