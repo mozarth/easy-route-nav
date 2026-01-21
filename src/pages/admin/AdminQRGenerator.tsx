@@ -96,6 +96,13 @@ const AdminQRGenerator = () => {
     window.open(url, '_blank');
   };
 
+  const openWaze = () => {
+    const lote = lotes.find(l => l.id === selectedLoteId);
+    if (!lote) return;
+    const url = `https://waze.com/ul?ll=${lote.latitude},${lote.longitude}&navigate=yes`;
+    window.open(url, '_blank');
+  };
+
   const downloadQRPNG = () => {
     if (!qrCodeUrl) return;
     const lote = lotes.find(l => l.id === selectedLoteId);
@@ -284,6 +291,14 @@ const AdminQRGenerator = () => {
                         >
                           <Navigation className="w-4 h-4 mr-2" />
                           Ver Ruta en Google Maps
+                        </Button>
+
+                        <Button
+                          onClick={openWaze}
+                          className="w-full bg-[#33CCFF] hover:bg-[#29B8E8] text-black"
+                        >
+                          <Navigation className="w-4 h-4 mr-2" />
+                          Ver Ruta en Waze
                         </Button>
 
                         <div className="flex gap-2">

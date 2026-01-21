@@ -45,6 +45,13 @@ const LoteFinder = () => {
     }
   };
 
+  const abrirWaze = () => {
+    if (loteEncontrado) {
+      const url = `https://waze.com/ul?ll=${loteEncontrado.latitude},${loteEncontrado.longitude}&navigate=yes`;
+      window.open(url, '_blank');
+    }
+  };
+
   const reiniciarBusqueda = () => {
     setNumeroLote('');
     setLoteEncontrado(null);
@@ -130,6 +137,15 @@ const LoteFinder = () => {
                 >
                   <Navigation className="w-5 h-5 mr-2" />
                   Ver Ruta en Google Maps
+                </Button>
+
+                <Button
+                  onClick={abrirWaze}
+                  className="w-full h-12 text-lg bg-[#33CCFF] hover:bg-[#29B8E8] text-black"
+                  size="lg"
+                >
+                  <Navigation className="w-5 h-5 mr-2" />
+                  Ver Ruta en Waze
                 </Button>
                 
                 <Button

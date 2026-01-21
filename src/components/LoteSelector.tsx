@@ -53,6 +53,12 @@ const LoteSelector = ({ onLoteSelected, defaultEtapa, hideEtapaSelector = false 
     window.open(url, '_blank');
   };
 
+  const openWazeRoute = () => {
+    if (!loteSeleccionado) return;
+    const url = `https://waze.com/ul?ll=${loteSeleccionado.latitude},${loteSeleccionado.longitude}&navigate=yes`;
+    window.open(url, '_blank');
+  };
+
   const generateQRCode = async () => {
     if (!loteSeleccionado) return;
     
@@ -173,12 +179,21 @@ const LoteSelector = ({ onLoteSelected, defaultEtapa, hideEtapaSelector = false 
                 className="w-full"
               >
                 <Navigation className="w-4 h-4" />
-                Ver Ruta al Lote
+                Ver Ruta en Google Maps
+                <ExternalLink className="w-4 h-4" />
+              </Button>
+
+              <Button 
+                onClick={openWazeRoute}
+                className="w-full bg-[#33CCFF] hover:bg-[#29B8E8] text-black"
+              >
+                <Navigation className="w-4 h-4" />
+                Ver Ruta en Waze
                 <ExternalLink className="w-4 h-4" />
               </Button>
               
               <p className="text-xs text-muted-foreground text-center">
-                Se abrirá Google Maps desde la entrada del condominio
+                Se abrirá la app de navegación desde la entrada del condominio
               </p>
 
               {/* Botón para generar QR */}
