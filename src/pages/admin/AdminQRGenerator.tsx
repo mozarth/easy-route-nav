@@ -74,10 +74,15 @@ const AdminQRGenerator = () => {
 
     setGeneratingQR(true);
     
-    // Generate Google Maps route URL
-    const origen = `${property.latitude},${property.longitude}`;
-    const destino = `${lote.latitude},${lote.longitude}`;
-    const googleMapsUrl = `https://www.google.com/maps/dir/${origen}/${destino}`;
+    // Use custom route URL if available, otherwise generate from coordinates
+    let googleMapsUrl: string;
+    if (lote.customRouteUrl) {
+      googleMapsUrl = lote.customRouteUrl;
+    } else {
+      const origen = `${property.latitude},${property.longitude}`;
+      const destino = `${lote.latitude},${lote.longitude}`;
+      googleMapsUrl = `https://www.google.com/maps/dir/${origen}/${destino}`;
+    }
     
     const qrDataUrl = await generateQRCodeDataURL(googleMapsUrl);
     setQrCodeUrl(qrDataUrl);
@@ -90,17 +95,28 @@ const AdminQRGenerator = () => {
     
     if (!property || !lote) return;
 
-    const origen = `${property.latitude},${property.longitude}`;
-    const destino = `${lote.latitude},${lote.longitude}`;
-    const url = `https://www.google.com/maps/dir/${origen}/${destino}`;
-    window.open(url, '_blank');
+    // Use custom route URL if available
+    if (lote.customRouteUrl) {
+      window.open(lote.customRouteUrl, '_blank');
+    } else {
+      const origen = `${property.latitude},${property.longitude}`;
+      const destino = `${lote.latitude},${lote.longitude}`;
+      const url = `https://www.google.com/maps/dir/${origen}/${destino}`;
+      window.open(url, '_blank');
+    }
   };
 
   const openWaze = () => {
     const lote = lotes.find(l => l.id === selectedLoteId);
     if (!lote) return;
-    const url = `https://waze.com/ul?ll=${lote.latitude},${lote.longitude}&navigate=yes`;
-    window.open(url, '_blank');
+    
+    // If there's a custom route with waypoints, use Google Maps instead (Waze doesn't support waypoints)
+    if (lote.customRouteUrl && lote.customRouteUrl.includes('waypoints=')) {
+      window.open(lote.customRouteUrl, '_blank');
+    } else {
+      const url = `https://waze.com/ul?ll=${lote.latitude},${lote.longitude}&navigate=yes`;
+      window.open(url, '_blank');
+    }
   };
 
   const downloadQRPNG = () => {
