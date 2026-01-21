@@ -132,6 +132,8 @@ export type Database = {
       }
       property_lotes: {
         Row: {
+          checkpoint_latitude: number | null
+          checkpoint_longitude: number | null
           created_at: string
           custom_route_url: string | null
           id: string
@@ -144,6 +146,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          checkpoint_latitude?: number | null
+          checkpoint_longitude?: number | null
           created_at?: string
           custom_route_url?: string | null
           id?: string
@@ -156,6 +160,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          checkpoint_latitude?: number | null
+          checkpoint_longitude?: number | null
           created_at?: string
           custom_route_url?: string | null
           id?: string

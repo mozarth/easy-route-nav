@@ -72,6 +72,8 @@ const AdminProperties = () => {
     latitude: '',
     longitude: '',
     imageUrl: '',
+    checkpointLatitude: '',
+    checkpointLongitude: '',
   });
   const [savingLote, setSavingLote] = useState(false);
   const [uploadingLoteImage, setUploadingLoteImage] = useState(false);
@@ -264,6 +266,8 @@ const AdminProperties = () => {
       latitude: '',
       longitude: '',
       imageUrl: '',
+      checkpointLatitude: '',
+      checkpointLongitude: '',
     });
     setShowLoteForm(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -277,6 +281,8 @@ const AdminProperties = () => {
       latitude: '',
       longitude: '',
       imageUrl: '',
+      checkpointLatitude: '',
+      checkpointLongitude: '',
     });
     setShowLoteForm(propertyId);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -291,6 +297,8 @@ const AdminProperties = () => {
       latitude: lote.latitude.toString(),
       longitude: lote.longitude.toString(),
       imageUrl: lote.imageUrl || '',
+      checkpointLatitude: lote.checkpointLatitude?.toString() || '',
+      checkpointLongitude: lote.checkpointLongitude?.toString() || '',
     });
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -306,6 +314,8 @@ const AdminProperties = () => {
       latitude: parseFloat(loteFormData.latitude),
       longitude: parseFloat(loteFormData.longitude),
       imageUrl: loteFormData.imageUrl || null,
+      checkpointLatitude: loteFormData.checkpointLatitude ? parseFloat(loteFormData.checkpointLatitude) : null,
+      checkpointLongitude: loteFormData.checkpointLongitude ? parseFloat(loteFormData.checkpointLongitude) : null,
     });
 
     setSavingLote(false);
@@ -704,6 +714,52 @@ const AdminProperties = () => {
                           </div>
                         )}
 
+                        {/* Checkpoint / Punto de Control */}
+                        <div className="mt-4 p-3 border border-dashed border-border rounded-lg bg-muted/30">
+                          <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-orange-500" />
+                            Punto de Control (opcional)
+                          </label>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Si se especifica, la ruta pasará obligatoriamente por este punto antes de llegar al destino final.
+                          </p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs font-medium mb-1 block">Latitud</label>
+                              <Input
+                                type="number"
+                                step="any"
+                                value={loteFormData.checkpointLatitude}
+                                onChange={(e) => setLoteFormData(prev => ({ ...prev, checkpointLatitude: e.target.value }))}
+                                placeholder="6.1082"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium mb-1 block">Longitud</label>
+                              <Input
+                                type="number"
+                                step="any"
+                                value={loteFormData.checkpointLongitude}
+                                onChange={(e) => setLoteFormData(prev => ({ ...prev, checkpointLongitude: e.target.value }))}
+                                placeholder="-75.4873"
+                              />
+                            </div>
+                          </div>
+                          {loteFormData.checkpointLatitude && loteFormData.checkpointLongitude && (
+                            <div className="mt-2">
+                              <a
+                                href={`https://www.google.com/maps?q=${loteFormData.checkpointLatitude},${loteFormData.checkpointLongitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 text-xs text-orange-600 hover:underline"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Verificar punto de control
+                              </a>
+                            </div>
+                          )}
+                        </div>
+
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start mt-3">
                           <div className="lg:col-span-2">
                             <label className="text-sm font-medium mb-1 block">Imagen (opcional)</label>
@@ -801,6 +857,12 @@ const AdminProperties = () => {
                               <p className="text-xs text-muted-foreground">
                                 {lote.latitude.toFixed(4)}, {lote.longitude.toFixed(4)}
                               </p>
+                              {lote.checkpointLatitude && lote.checkpointLongitude && (
+                                <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                                  <MapPin className="w-3.5 h-3.5" />
+                                  Con punto de control
+                                </p>
+                              )}
                               {lote.imageUrl ? (
                                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                                   <ImageIcon className="w-3.5 h-3.5" />
