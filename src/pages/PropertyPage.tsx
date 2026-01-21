@@ -58,11 +58,16 @@ const PropertyPage = () => {
       setError('');
       setQrCodeUrl(null);
 
-      // Generate QR code with Google Maps route
+      // Generate QR code - use custom route URL if available, otherwise generate from coordinates
       setGeneratingQR(true);
-      const origen = `${property.latitude},${property.longitude}`;
-      const destino = `${lote.latitude},${lote.longitude}`;
-      const googleMapsUrl = `https://www.google.com/maps/dir/${origen}/${destino}`;
+      let googleMapsUrl: string;
+      if (lote.customRouteUrl) {
+        googleMapsUrl = lote.customRouteUrl;
+      } else {
+        const origen = `${property.latitude},${property.longitude}`;
+        const destino = `${lote.latitude},${lote.longitude}`;
+        googleMapsUrl = `https://www.google.com/maps/dir/${origen}/${destino}`;
+      }
       const qrDataUrl = await generateQRCodeDataURL(googleMapsUrl);
       setQrCodeUrl(qrDataUrl);
       setGeneratingQR(false);
@@ -97,10 +102,15 @@ const PropertyPage = () => {
 
 const abrirGoogleMaps = () => {
     if (loteEncontrado && property) {
-      const origen = `${property.latitude},${property.longitude}`;
-      const destino = `${loteEncontrado.latitude},${loteEncontrado.longitude}`;
-      const url = `https://www.google.com/maps/dir/${origen}/${destino}`;
-      window.open(url, '_blank');
+      // Use custom route URL if available
+      if (loteEncontrado.customRouteUrl) {
+        window.open(loteEncontrado.customRouteUrl, '_blank');
+      } else {
+        const origen = `${property.latitude},${property.longitude}`;
+        const destino = `${loteEncontrado.latitude},${loteEncontrado.longitude}`;
+        const url = `https://www.google.com/maps/dir/${origen}/${destino}`;
+        window.open(url, '_blank');
+      }
     }
   };
 

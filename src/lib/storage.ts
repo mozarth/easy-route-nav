@@ -25,6 +25,7 @@ export interface PropertyLote {
   latitude: number;
   longitude: number;
   imageUrl?: string | null;
+  customRouteUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -74,6 +75,7 @@ const transformPropertyLote = (row: any): PropertyLote => ({
   latitude: row.latitude,
   longitude: row.longitude,
   imageUrl: row.image_url,
+  customRouteUrl: row.custom_route_url,
   createdAt: new Date(row.created_at),
   updatedAt: new Date(row.updated_at),
 });
