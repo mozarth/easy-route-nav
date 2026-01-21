@@ -133,6 +133,7 @@ export type Database = {
       property_lotes: {
         Row: {
           created_at: string
+          custom_route_url: string | null
           id: string
           image_url: string | null
           latitude: number
@@ -144,6 +145,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_route_url?: string | null
           id?: string
           image_url?: string | null
           latitude: number
@@ -155,6 +157,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_route_url?: string | null
           id?: string
           image_url?: string | null
           latitude?: number
