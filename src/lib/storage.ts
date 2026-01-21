@@ -26,6 +26,8 @@ export interface PropertyLote {
   longitude: number;
   imageUrl?: string | null;
   customRouteUrl?: string | null;
+  checkpointLatitude?: number | null;
+  checkpointLongitude?: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -76,6 +78,8 @@ const transformPropertyLote = (row: any): PropertyLote => ({
   longitude: row.longitude,
   imageUrl: row.image_url,
   customRouteUrl: row.custom_route_url,
+  checkpointLatitude: row.checkpoint_latitude,
+  checkpointLongitude: row.checkpoint_longitude,
   createdAt: new Date(row.created_at),
   updatedAt: new Date(row.updated_at),
 });
@@ -312,20 +316,37 @@ export const saveLote = async (
     longitude: number;
   }
 ): Promise<PropertyLote | null> => {
-  const payload = {
-    property_id: lote.propertyId,
-    numero: lote.numero,
-    tipo: lote.tipo,
-    latitude: lote.latitude,
-    longitude: lote.longitude,
-    image_url: lote.imageUrl ?? null,
-  };
+  let customRouteUrl: string | null = null;
+
+  // If checkpoint is set, auto-generate the custom route URL
+  if (lote.checkpointLatitude && lote.checkpointLongitude) {
+    // We need property's origin coordinates - fetch them
+    const { data: propData } = await supabase
+      .from('properties')
+      .select('latitude, longitude')
+      .eq('id', lote.propertyId)
+      .single();
+    
+    if (propData) {
+      customRouteUrl = `https://www.google.com/maps/dir/?api=1&origin=${propData.latitude},${propData.longitude}&destination=${lote.latitude},${lote.longitude}&waypoints=${lote.checkpointLatitude},${lote.checkpointLongitude}&travelmode=driving`;
+    }
+  }
 
   if (lote.id) {
     // Update
     const { data, error } = await supabase
       .from('property_lotes')
-      .update(payload)
+      .update({
+        property_id: lote.propertyId,
+        numero: lote.numero,
+        tipo: lote.tipo,
+        latitude: lote.latitude,
+        longitude: lote.longitude,
+        image_url: lote.imageUrl ?? null,
+        checkpoint_latitude: lote.checkpointLatitude ?? null,
+        checkpoint_longitude: lote.checkpointLongitude ?? null,
+        custom_route_url: customRouteUrl,
+      })
       .eq('id', lote.id)
       .select()
       .single();
@@ -340,7 +361,17 @@ export const saveLote = async (
     // Insert
     const { data, error } = await supabase
       .from('property_lotes')
-      .insert(payload)
+      .insert({
+        property_id: lote.propertyId,
+        numero: lote.numero,
+        tipo: lote.tipo,
+        latitude: lote.latitude,
+        longitude: lote.longitude,
+        image_url: lote.imageUrl ?? null,
+        checkpoint_latitude: lote.checkpointLatitude ?? null,
+        checkpoint_longitude: lote.checkpointLongitude ?? null,
+        custom_route_url: customRouteUrl,
+      })
       .select()
       .single();
 
