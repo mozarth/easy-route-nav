@@ -143,6 +143,10 @@ const AdminProperties = () => {
     });
     setShowForm(true);
     if (mapImageInputRef.current) mapImageInputRef.current.value = '';
+    // Ensure the form is visible when editing a property lower down the list
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 50);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -693,6 +697,7 @@ const AdminProperties = () => {
                       variant="ghost" 
                       size="icon"
                       onClick={() => handleEdit(property)}
+                      title="Editar propiedad"
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
