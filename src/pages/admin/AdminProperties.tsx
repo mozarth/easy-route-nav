@@ -697,6 +697,7 @@ const AdminProperties = () => {
                       variant="ghost" 
                       size="icon"
                       onClick={() => handleEdit(property)}
+                      title="Editar propiedad"
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
