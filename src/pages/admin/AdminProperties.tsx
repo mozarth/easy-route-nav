@@ -143,6 +143,10 @@ const AdminProperties = () => {
     });
     setShowForm(true);
     if (mapImageInputRef.current) mapImageInputRef.current.value = '';
+    // Ensure the form is visible when editing a property lower down the list
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 50);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
