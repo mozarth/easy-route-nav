@@ -147,7 +147,7 @@ const abrirGoogleMaps = () => {
 
   const openWazeToProperty = () => {
     if (!property) return;
-    const url = `https://waze.com/ul?ll=${property.latitude},${property.longitude}&navigate=yes`;
+    const url = `https://www.waze.com/ul?ll=${property.latitude}%2C${property.longitude}&navigate=yes&zoom=17`;
     window.open(url, '_blank');
   };
 
