@@ -260,6 +260,31 @@ const AdminUsers = () => {
 
         if (profileError) throw profileError;
 
+        // Update email/password via secure edge function if changed
+        const emailChanged = formData.email && formData.email.trim().toLowerCase() !== editingUser.email.toLowerCase();
+        const passwordChanged = formData.password && formData.password.length > 0;
+
+        if (emailChanged || passwordChanged) {
+          if (passwordChanged && formData.password.length < 6) {
+            setFormErrors({ password: 'Mínimo 6 caracteres' });
+            setSubmitting(false);
+            return;
+          }
+          const { data: credData, error: credError } = await supabase.functions.invoke('update-user-credentials', {
+            body: {
+              target_user_id: editingUser.user_id,
+              email: emailChanged ? formData.email : undefined,
+              password: passwordChanged ? formData.password : undefined,
+            },
+          });
+          if (credError || !credData?.ok) {
+            const message = credData?.error || credError?.message || 'No se pudieron actualizar las credenciales';
+            toast({ title: 'Error', description: message, variant: 'destructive' });
+            setSubmitting(false);
+            return;
+          }
+        }
+
         // Update role in user_roles table
         // First delete existing role, then insert new one
         await supabase
