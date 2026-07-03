@@ -516,36 +516,42 @@ const AdminUsers = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                {!editingUser && (
-                  <>
-                    <div>
-                      <Label>Correo Electrónico *</Label>
-                      <Input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="correo@ejemplo.com"
-                        className={formErrors.email ? 'border-destructive' : ''}
-                      />
-                      {formErrors.email && (
-                        <p className="text-sm text-destructive mt-1">{formErrors.email}</p>
-                      )}
-                    </div>
-                    <div>
-                      <Label>Contraseña *</Label>
-                      <Input
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                        placeholder="••••••••"
-                        className={formErrors.password ? 'border-destructive' : ''}
-                      />
-                      {formErrors.password && (
-                        <p className="text-sm text-destructive mt-1">{formErrors.password}</p>
-                      )}
-                    </div>
-                  </>
-                )}
+                <div>
+                  <Label>Correo Electrónico *</Label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="correo@ejemplo.com"
+                    className={formErrors.email ? 'border-destructive' : ''}
+                  />
+                  {formErrors.email && (
+                    <p className="text-sm text-destructive mt-1">{formErrors.email}</p>
+                  )}
+                  {editingUser && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Cambia el correo si necesitas actualizarlo.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label>Contraseña {editingUser ? '(dejar vacío para no cambiar)' : '*'}</Label>
+                  <Input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="••••••••"
+                    className={formErrors.password ? 'border-destructive' : ''}
+                  />
+                  {formErrors.password && (
+                    <p className="text-sm text-destructive mt-1">{formErrors.password}</p>
+                  )}
+                  {editingUser && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Ingresa una nueva contraseña solo si deseas restablecerla.
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Property selector for portero/usuario */}
