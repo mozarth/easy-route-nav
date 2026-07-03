@@ -1,1 +1,10 @@
 project_id = "odsmlwcngsdvzjlepnne"
+
+[functions.create-user]
+verify_jwt = true
+
+[functions.update-user-credentials]
+verify_jwt = true
+
+[functions.ensure-profile]
+verify_jwt = true

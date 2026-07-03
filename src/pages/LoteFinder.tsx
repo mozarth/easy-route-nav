@@ -46,8 +46,8 @@ const LoteFinder = () => {
   };
 
   const abrirWaze = () => {
-    if (loteEncontrado) {
-      const url = `https://waze.com/ul?ll=${loteEncontrado.latitude},${loteEncontrado.longitude}&navigate=yes`;
+    if (loteEncontrado && loteEncontrado.latitude && loteEncontrado.longitude) {
+      const url = `https://www.waze.com/ul?ll=${loteEncontrado.latitude}%2C${loteEncontrado.longitude}&navigate=yes&zoom=17`;
       window.open(url, '_blank');
     }
   };

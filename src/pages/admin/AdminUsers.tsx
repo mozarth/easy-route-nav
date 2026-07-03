@@ -194,6 +194,7 @@ const AdminUsers = () => {
     });
     setSelectedProperties(user.assignedProperties || []);
     setShowForm(true);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
   };
 
   const togglePropertySelection = (propertyId: string) => {
@@ -258,6 +259,31 @@ const AdminUsers = () => {
           .eq('id', editingUser.id);
 
         if (profileError) throw profileError;
+
+        // Update email/password via secure edge function if changed
+        const emailChanged = formData.email && formData.email.trim().toLowerCase() !== editingUser.email.toLowerCase();
+        const passwordChanged = formData.password && formData.password.length > 0;
+
+        if (emailChanged || passwordChanged) {
+          if (passwordChanged && formData.password.length < 6) {
+            setFormErrors({ password: 'Mínimo 6 caracteres' });
+            setSubmitting(false);
+            return;
+          }
+          const { data: credData, error: credError } = await supabase.functions.invoke('update-user-credentials', {
+            body: {
+              target_user_id: editingUser.user_id,
+              email: emailChanged ? formData.email : undefined,
+              password: passwordChanged ? formData.password : undefined,
+            },
+          });
+          if (credError || !credData?.ok) {
+            const message = credData?.error || credError?.message || 'No se pudieron actualizar las credenciales';
+            toast({ title: 'Error', description: message, variant: 'destructive' });
+            setSubmitting(false);
+            return;
+          }
+        }
 
         // Update role in user_roles table
         // First delete existing role, then insert new one
@@ -490,36 +516,42 @@ const AdminUsers = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                {!editingUser && (
-                  <>
-                    <div>
-                      <Label>Correo Electrónico *</Label>
-                      <Input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="correo@ejemplo.com"
-                        className={formErrors.email ? 'border-destructive' : ''}
-                      />
-                      {formErrors.email && (
-                        <p className="text-sm text-destructive mt-1">{formErrors.email}</p>
-                      )}
-                    </div>
-                    <div>
-                      <Label>Contraseña *</Label>
-                      <Input
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                        placeholder="••••••••"
-                        className={formErrors.password ? 'border-destructive' : ''}
-                      />
-                      {formErrors.password && (
-                        <p className="text-sm text-destructive mt-1">{formErrors.password}</p>
-                      )}
-                    </div>
-                  </>
-                )}
+                <div>
+                  <Label>Correo Electrónico *</Label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="correo@ejemplo.com"
+                    className={formErrors.email ? 'border-destructive' : ''}
+                  />
+                  {formErrors.email && (
+                    <p className="text-sm text-destructive mt-1">{formErrors.email}</p>
+                  )}
+                  {editingUser && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Cambia el correo si necesitas actualizarlo.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label>Contraseña {editingUser ? '(dejar vacío para no cambiar)' : '*'}</Label>
+                  <Input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="••••••••"
+                    className={formErrors.password ? 'border-destructive' : ''}
+                  />
+                  {formErrors.password && (
+                    <p className="text-sm text-destructive mt-1">{formErrors.password}</p>
+                  )}
+                  {editingUser && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Ingresa una nueva contraseña solo si deseas restablecerla.
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Property selector for portero/usuario */}

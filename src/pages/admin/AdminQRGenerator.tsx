@@ -108,15 +108,10 @@ const AdminQRGenerator = () => {
 
   const openWaze = () => {
     const lote = lotes.find(l => l.id === selectedLoteId);
-    if (!lote) return;
-    
-    // If there's a custom route with waypoints, use Google Maps instead (Waze doesn't support waypoints)
-    if (lote.customRouteUrl && lote.customRouteUrl.includes('waypoints=')) {
-      window.open(lote.customRouteUrl, '_blank');
-    } else {
-      const url = `https://waze.com/ul?ll=${lote.latitude},${lote.longitude}&navigate=yes`;
-      window.open(url, '_blank');
-    }
+    if (!lote || !lote.latitude || !lote.longitude) return;
+    // Waze doesn't support waypoints — always navigate directly to the final coords.
+    const url = `https://www.waze.com/ul?ll=${lote.latitude}%2C${lote.longitude}&navigate=yes&zoom=17`;
+    window.open(url, '_blank');
   };
 
   const downloadQRPNG = () => {

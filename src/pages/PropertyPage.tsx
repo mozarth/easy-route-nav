@@ -115,14 +115,10 @@ const abrirGoogleMaps = () => {
   };
 
   const abrirWaze = () => {
-    if (loteEncontrado) {
-      // If there's a custom route with waypoints, open Google Maps instead (Waze doesn't support waypoints)
-      if (loteEncontrado.customRouteUrl && loteEncontrado.customRouteUrl.includes('waypoints=')) {
-        window.open(loteEncontrado.customRouteUrl, '_blank');
-      } else {
-        const url = `https://waze.com/ul?ll=${loteEncontrado.latitude},${loteEncontrado.longitude}&navigate=yes`;
-        window.open(url, '_blank');
-      }
+    if (loteEncontrado && loteEncontrado.latitude && loteEncontrado.longitude) {
+      // Waze doesn't support waypoints — always navigate directly to the lote coords.
+      const url = `https://www.waze.com/ul?ll=${loteEncontrado.latitude}%2C${loteEncontrado.longitude}&navigate=yes&zoom=17`;
+      window.open(url, '_blank');
     }
   };
 
@@ -151,7 +147,7 @@ const abrirGoogleMaps = () => {
 
   const openWazeToProperty = () => {
     if (!property) return;
-    const url = `https://waze.com/ul?ll=${property.latitude},${property.longitude}&navigate=yes`;
+    const url = `https://www.waze.com/ul?ll=${property.latitude}%2C${property.longitude}&navigate=yes&zoom=17`;
     window.open(url, '_blank');
   };
 
