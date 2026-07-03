@@ -194,6 +194,7 @@ const AdminUsers = () => {
     });
     setSelectedProperties(user.assignedProperties || []);
     setShowForm(true);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
   };
 
   const togglePropertySelection = (propertyId: string) => {
