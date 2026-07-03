@@ -55,7 +55,7 @@ const LoteSelector = ({ onLoteSelected, defaultEtapa, hideEtapaSelector = false 
 
   const openWazeRoute = () => {
     if (!loteSeleccionado) return;
-    const url = `https://waze.com/ul?ll=${loteSeleccionado.latitude},${loteSeleccionado.longitude}&navigate=yes`;
+    const url = `https://www.waze.com/ul?ll=${loteSeleccionado.latitude}%2C${loteSeleccionado.longitude}&navigate=yes&zoom=17`;
     window.open(url, '_blank');
   };
 
