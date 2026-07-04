@@ -7,4 +7,4 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.ensure-profile]
-verify_jwt = true
+verify_jwt = false
