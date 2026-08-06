@@ -198,6 +198,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isAuthenticated = !!session && !!user;
   const isAdmin = profile?.role === 'admin' && profile?.is_active === true;
+  const isManager =
+    profile?.role === 'portero' && profile?.is_active === true && managedPropertyIds.length > 0;
 
   return (
     <AuthContext.Provider 
@@ -207,6 +209,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile, 
         isAuthenticated, 
         isAdmin,
+        isManager,
+        managedPropertyIds,
         isLoading, 
         login, 
         signup, 
