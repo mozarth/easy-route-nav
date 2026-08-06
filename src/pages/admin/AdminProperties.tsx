@@ -495,10 +495,12 @@ const AdminProperties = () => {
             <h1 className="text-2xl font-bold">Propiedades</h1>
             <p className="text-muted-foreground">Gestiona las propiedades del sistema</p>
           </div>
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="w-4 h-4" />
-            Nueva Propiedad
-          </Button>
+          {!isRestricted && (
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="w-4 h-4" />
+              Nueva Propiedad
+            </Button>
+          )}
         </div>
 
         {/* Form Modal/Section */}
