@@ -48,7 +48,7 @@ interface CheckpointFormData {
 }
 
 const AdminProperties = () => {
-  const { logout } = useAuth();
+  const { logout, profile, isManager, managedPropertyIds } = useAuth();
   const { toast } = useToast();
   const [properties, setProperties] = useState<Property[]>([]);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
