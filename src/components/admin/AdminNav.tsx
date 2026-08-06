@@ -31,8 +31,14 @@ const navItems: NavItem[] = [
 ];
 
 export const AdminNav = () => {
-  const { logout } = useAuth();
+  const { logout, profile, isManager } = useAuth();
   const location = useLocation();
+
+  const visibleItems =
+    profile?.role === 'admin' || !isManager
+      ? navItems
+      : navItems.filter((i) => i.to === '/admin/propiedades');
+
 
   const langPrefix = location.pathname.match(/^\/([a-z]{2})(\/|$)/i)?.[1]
     ? `/${location.pathname.match(/^\/([a-z]{2})(\/|$)/i)![1]}`
