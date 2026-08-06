@@ -85,16 +85,21 @@ const AdminProperties = () => {
   const [savingLote, setSavingLote] = useState(false);
   const [uploadingLoteImage, setUploadingLoteImage] = useState(false);
 
+  const isRestricted = profile?.role !== 'admin' && isManager;
+
   const loadProperties = async () => {
     setLoading(true);
     const props = await getProperties();
-    setProperties(props);
+    setProperties(
+      isRestricted ? props.filter((p) => managedPropertyIds.includes(p.id)) : props
+    );
     setLoading(false);
   };
 
   useEffect(() => {
     loadProperties();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRestricted, managedPropertyIds.join(',')]);
 
   const generateSlug = (name: string) => {
     return name
