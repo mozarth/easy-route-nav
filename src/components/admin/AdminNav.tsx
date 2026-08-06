@@ -58,7 +58,7 @@ export const AdminNav = () => {
         </div>
 
         <nav className="space-y-1">
-          {navItems.map((item) => (
+          {visibleItems.map((item) => (
             <Link
               key={item.to}
               to={`${langPrefix}${item.to}`}
@@ -96,7 +96,7 @@ export const AdminNav = () => {
 
       {/* Mobile Bottom Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border p-2 flex justify-around z-40">
-        {navItems.map((item) => (
+        {visibleItems.map((item) => (
           <Link
             key={item.to}
             to={`${langPrefix}${item.to}`}
