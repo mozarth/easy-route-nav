@@ -19,6 +19,8 @@ interface AuthContextType {
   profile: Profile | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isManager: boolean;
+  managedPropertyIds: string[];
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ error: string | null }>;
   signup: (email: string, password: string, fullName: string, role?: UserRole) => Promise<{ error: string | null }>;
