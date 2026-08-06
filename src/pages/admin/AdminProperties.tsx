@@ -48,7 +48,7 @@ interface CheckpointFormData {
 }
 
 const AdminProperties = () => {
-  const { logout } = useAuth();
+  const { logout, profile, isManager, managedPropertyIds } = useAuth();
   const { toast } = useToast();
   const [properties, setProperties] = useState<Property[]>([]);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
@@ -85,16 +85,21 @@ const AdminProperties = () => {
   const [savingLote, setSavingLote] = useState(false);
   const [uploadingLoteImage, setUploadingLoteImage] = useState(false);
 
+  const isRestricted = profile?.role !== 'admin' && isManager;
+
   const loadProperties = async () => {
     setLoading(true);
     const props = await getProperties();
-    setProperties(props);
+    setProperties(
+      isRestricted ? props.filter((p) => managedPropertyIds.includes(p.id)) : props
+    );
     setLoading(false);
   };
 
   useEffect(() => {
     loadProperties();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRestricted, managedPropertyIds.join(',')]);
 
   const generateSlug = (name: string) => {
     return name
@@ -490,10 +495,12 @@ const AdminProperties = () => {
             <h1 className="text-2xl font-bold">Propiedades</h1>
             <p className="text-muted-foreground">Gestiona las propiedades del sistema</p>
           </div>
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="w-4 h-4" />
-            Nueva Propiedad
-          </Button>
+          {!isRestricted && (
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="w-4 h-4" />
+              Nueva Propiedad
+            </Button>
+          )}
         </div>
 
         {/* Form Modal/Section */}

@@ -1,9 +1,10 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 export const ProtectedRoute = () => {
-  const { isAuthenticated, isLoading, profile } = useAuth();
+  const { isAuthenticated, isLoading, profile, isManager } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -13,20 +14,25 @@ export const ProtectedRoute = () => {
     );
   }
 
+  const pathname = location.pathname;
+  const lang = pathname.match(/^\/([a-z]{2})(\/|$)/i)?.[1];
+
   if (!isAuthenticated) {
-    const pathname = window.location.pathname;
-    const lang = pathname.match(/^\/([a-z]{2})(\/|$)/i)?.[1];
     const loginPath = lang ? `/${lang}/admin` : '/admin';
     return <Navigate to={loginPath} replace />;
   }
 
-  // Only admins can access admin routes
-  if (profile?.role !== 'admin') {
-    const pathname = window.location.pathname;
-    const lang = pathname.match(/^\/([a-z]{2})(\/|$)/i)?.[1];
-    const userPath = lang ? `/${lang}/user/propiedades` : '/user/propiedades';
-    return <Navigate to={userPath} replace />;
+  if (profile?.role === 'admin') {
+    return <Outlet />;
   }
 
-  return <Outlet />;
+  // Unit managers can only use the properties section
+  if (isManager) {
+    const propertiesPath = lang ? `/${lang}/admin/propiedades` : '/admin/propiedades';
+    const isPropertiesRoute = /\/admin\/(propiedades|properties)$/.test(pathname);
+    return isPropertiesRoute ? <Outlet /> : <Navigate to={propertiesPath} replace />;
+  }
+
+  const userPath = lang ? `/${lang}/user/propiedades` : '/user/propiedades';
+  return <Navigate to={userPath} replace />;
 };

@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 export const UserProtectedRoute = () => {
-  const { isAuthenticated, isLoading, profile } = useAuth();
+  const { isAuthenticated, isLoading, profile, isManager } = useAuth();
 
   if (isLoading) {
     return (
@@ -13,19 +13,24 @@ export const UserProtectedRoute = () => {
     );
   }
 
+  const pathname = window.location.pathname;
+  const lang = pathname.match(/^\/([a-z]{2})(\/|$)/i)?.[1];
+
   if (!isAuthenticated) {
-    const pathname = window.location.pathname;
-    const lang = pathname.match(/^\/([a-z]{2})(\/|$)/i)?.[1];
     const loginPath = lang ? `/${lang}/admin` : '/admin';
     return <Navigate to={loginPath} replace />;
   }
 
-  // If user is admin, redirect them to admin panel
+  // Admins go to the admin panel
   if (profile?.role === 'admin') {
-    const pathname = window.location.pathname;
-    const lang = pathname.match(/^\/([a-z]{2})(\/|$)/i)?.[1];
     const adminPath = lang ? `/${lang}/admin/panel` : '/admin/panel';
     return <Navigate to={adminPath} replace />;
+  }
+
+  // Unit managers go to the properties admin section
+  if (isManager) {
+    const propertiesPath = lang ? `/${lang}/admin/propiedades` : '/admin/propiedades';
+    return <Navigate to={propertiesPath} replace />;
   }
 
   return <Outlet />;
