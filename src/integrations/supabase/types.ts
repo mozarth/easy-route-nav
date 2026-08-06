@@ -220,18 +220,21 @@ export type Database = {
       }
       user_property_access: {
         Row: {
+          can_manage: boolean
           created_at: string
           id: string
           profile_id: string
           property_id: string
         }
         Insert: {
+          can_manage?: boolean
           created_at?: string
           id?: string
           profile_id: string
           property_id: string
         }
         Update: {
+          can_manage?: boolean
           created_at?: string
           id?: string
           profile_id?: string
@@ -280,6 +283,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_property: {
+        Args: { _property_id: string; _user_id: string }
+        Returns: boolean
+      }
       get_user_role:
         | {
             Args: { user_uuid: string }
