@@ -8,6 +8,3 @@ verify_jwt = true
 
 [functions.ensure-profile]
 verify_jwt = false
-
-[functions.seed-manager]
-verify_jwt = false
