@@ -78,35 +78,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (ensureError) {
           console.error('Error ensuring profile:', ensureError);
-          return null;
         }
 
-        const { data: profileData2, error: profileError2 } = await supabase
+        const { data: profileData2 } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', userId)
           .maybeSingle();
 
-        if (profileError2) {
-          console.error('Error fetching profile (after ensure):', profileError2);
-          return null;
-        }
-
-        profileData = profileData2;
+        profileData = profileData2 ?? null;
       }
 
       if (!profileData) return null;
 
-      // 2) Fetch role from user_roles (authoritative)
-      const { data: roleData, error: roleError } = await supabase
+      // 2) Fetch role from user_roles (authoritative). A user may have several rows.
+      const { data: roleRows, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .eq('user_id', userId);
 
       if (roleError) {
         console.error('Error fetching role:', roleError);
       }
+
+      const roles = (roleRows ?? []).map((r) => r.role as UserRole);
+      const roleData = {
+        role: roles.includes('admin')
+          ? 'admin'
+          : roles.includes('portero')
+            ? 'portero'
+            : roles[0],
+      };
+
 
       return {
         ...profileData,
