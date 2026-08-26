@@ -256,7 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         isManager,
         managedPropertyIds,
-        isLoading, 
+        isLoading: loading, 
         login, 
         signup, 
         logout 
