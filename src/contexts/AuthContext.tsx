@@ -241,6 +241,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAdmin = profile?.role === 'admin' && profile?.is_active === true;
   const isManager =
     profile?.role === 'portero' && profile?.is_active === true && managedPropertyIds.length > 0;
+  // Consider the app still loading while the session exists but the profile/access
+  // data has not been resolved yet (prevents redirect flickering).
+  const loading = isLoading || accessLoading || (isAuthenticated && profile === null && isLoading);
+
 
   return (
     <AuthContext.Provider 
