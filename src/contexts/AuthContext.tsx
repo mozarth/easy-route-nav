@@ -112,19 +112,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    let active = true;
+    let currentUserId: string | null = null;
+    let inFlight = false;
+
+    const loadProfile = async (userId: string) => {
+      if (inFlight && currentUserId === userId) return;
+      currentUserId = userId;
+      inFlight = true;
+      setIsLoading(true);
+      try {
+        const p = await fetchProfile(userId);
+        if (!active) return;
+        setProfile(p);
+      } finally {
+        if (active) {
+          inFlight = false;
+          setIsLoading(false);
+        }
+      }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          setIsLoading(true);
-          setTimeout(() => {
-            fetchProfile(session.user.id)
-              .then(setProfile)
-              .finally(() => setIsLoading(false));
-          }, 0);
+          // Avoid refetching on token refresh for the same user
+          if (currentUserId === session.user.id) return;
+          setTimeout(() => loadProfile(session.user.id), 0);
         } else {
+          currentUserId = null;
           setProfile(null);
           setIsLoading(false);
         }
@@ -132,21 +151,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!active) return;
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        setIsLoading(true);
-        fetchProfile(session.user.id)
-          .then((p) => setProfile(p))
-          .finally(() => setIsLoading(false));
+        loadProfile(session.user.id);
       } else {
         setIsLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
+
 
   const login = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {
