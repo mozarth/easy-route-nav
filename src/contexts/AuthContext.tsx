@@ -35,18 +35,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [managedPropertyIds, setManagedPropertyIds] = useState<string[]>([]);
+  const [accessLoading, setAccessLoading] = useState(false);
 
   useEffect(() => {
     if (!profile?.id) {
       setManagedPropertyIds([]);
+      setAccessLoading(false);
       return;
     }
+    setAccessLoading(true);
     supabase
       .from('user_property_access')
       .select('property_id')
       .eq('profile_id', profile.id)
-      .then(({ data }) => setManagedPropertyIds((data ?? []).map((r) => r.property_id)));
+      .then(({ data }) => {
+        setManagedPropertyIds((data ?? []).map((r) => r.property_id));
+        setAccessLoading(false);
+      });
   }, [profile?.id]);
+
 
   const fetchProfile = async (userId: string) => {
     try {
