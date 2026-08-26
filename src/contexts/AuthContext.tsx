@@ -35,18 +35,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [managedPropertyIds, setManagedPropertyIds] = useState<string[]>([]);
+  const [accessLoading, setAccessLoading] = useState(false);
 
   useEffect(() => {
     if (!profile?.id) {
       setManagedPropertyIds([]);
+      setAccessLoading(false);
       return;
     }
+    setAccessLoading(true);
     supabase
       .from('user_property_access')
       .select('property_id')
       .eq('profile_id', profile.id)
-      .then(({ data }) => setManagedPropertyIds((data ?? []).map((r) => r.property_id)));
+      .then(({ data }) => {
+        setManagedPropertyIds((data ?? []).map((r) => r.property_id));
+        setAccessLoading(false);
+      });
   }, [profile?.id]);
+
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -71,35 +78,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (ensureError) {
           console.error('Error ensuring profile:', ensureError);
-          return null;
         }
 
-        const { data: profileData2, error: profileError2 } = await supabase
+        const { data: profileData2 } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', userId)
           .maybeSingle();
 
-        if (profileError2) {
-          console.error('Error fetching profile (after ensure):', profileError2);
-          return null;
-        }
-
-        profileData = profileData2;
+        profileData = profileData2 ?? null;
       }
 
       if (!profileData) return null;
 
-      // 2) Fetch role from user_roles (authoritative)
-      const { data: roleData, error: roleError } = await supabase
+      // 2) Fetch role from user_roles (authoritative). A user may have several rows.
+      const { data: roleRows, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .eq('user_id', userId);
 
       if (roleError) {
         console.error('Error fetching role:', roleError);
       }
+
+      const roles = (roleRows ?? []).map((r) => r.role as UserRole);
+      const roleData = {
+        role: roles.includes('admin')
+          ? 'admin'
+          : roles.includes('portero')
+            ? 'portero'
+            : roles[0],
+      };
+
 
       return {
         ...profileData,
@@ -112,19 +122,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    let active = true;
+    let currentUserId: string | null = null;
+    let inFlight = false;
+
+    const loadProfile = async (userId: string) => {
+      if (inFlight && currentUserId === userId) return;
+      currentUserId = userId;
+      inFlight = true;
+      setIsLoading(true);
+      try {
+        const p = await fetchProfile(userId);
+        if (!active) return;
+        setProfile(p);
+      } finally {
+        if (active) {
+          inFlight = false;
+          setIsLoading(false);
+        }
+      }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          setIsLoading(true);
-          setTimeout(() => {
-            fetchProfile(session.user.id)
-              .then(setProfile)
-              .finally(() => setIsLoading(false));
-          }, 0);
+          // Avoid refetching on token refresh for the same user
+          if (currentUserId === session.user.id) return;
+          setTimeout(() => loadProfile(session.user.id), 0);
         } else {
+          currentUserId = null;
           setProfile(null);
           setIsLoading(false);
         }
@@ -132,21 +161,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!active) return;
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        setIsLoading(true);
-        fetchProfile(session.user.id)
-          .then((p) => setProfile(p))
-          .finally(() => setIsLoading(false));
+        loadProfile(session.user.id);
       } else {
         setIsLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
+
 
   const login = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {
@@ -213,6 +244,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAdmin = profile?.role === 'admin' && profile?.is_active === true;
   const isManager =
     profile?.role === 'portero' && profile?.is_active === true && managedPropertyIds.length > 0;
+  // Consider the app still loading while the session exists but the profile/access
+  // data has not been resolved yet (prevents redirect flickering).
+  const loading = isLoading || accessLoading || (isAuthenticated && profile === null && isLoading);
+
 
   return (
     <AuthContext.Provider 
@@ -224,7 +259,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         isManager,
         managedPropertyIds,
-        isLoading, 
+        isLoading: loading, 
         login, 
         signup, 
         logout 
