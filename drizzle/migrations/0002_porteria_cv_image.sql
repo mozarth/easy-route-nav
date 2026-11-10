@@ -1,0 +1,1 @@
+UPDATE public.property_lotes SET image_url='/lotes/cv_porteria_2.jpeg' WHERE id='4f6a8b00-7cc2-4e54-b39e-c33b55a66291';

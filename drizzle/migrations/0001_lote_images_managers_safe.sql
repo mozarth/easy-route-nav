@@ -1,0 +1,4 @@
+DROP POLICY "Managers can upload lote images" ON storage.objects;
+DROP POLICY "Managers can update lote images" ON storage.objects;
+CREATE POLICY "Managers can upload lote images" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'lote-images' AND CASE WHEN (storage.foldername(name))[1] ~ '^[0-9a-f-]{36}$' THEN public.can_manage_property(auth.uid(), ((storage.foldername(name))[1])::uuid) ELSE false END);
+CREATE POLICY "Managers can update lote images" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'lote-images' AND CASE WHEN (storage.foldername(name))[1] ~ '^[0-9a-f-]{36}$' THEN public.can_manage_property(auth.uid(), ((storage.foldername(name))[1])::uuid) ELSE false END);

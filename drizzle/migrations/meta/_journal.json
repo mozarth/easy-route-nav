@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1794316129089,
+      "tag": "0000_lote_images_managers",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794316141028,
+      "tag": "0001_lote_images_managers_safe",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794316154812,
+      "tag": "0002_porteria_cv_image",
+      "breakpoints": true
+    }
+  ]
+}

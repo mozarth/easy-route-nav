@@ -569,7 +569,7 @@ export const uploadLoteImage = async (args: {
   try {
     const extRaw = args.file.name.split('.').pop()?.toLowerCase();
     const ext = extRaw && /^[a-z0-9]+$/.test(extRaw) ? extRaw : 'jpg';
-    const objectName = `${args.propertyId}/${args.loteId ?? crypto.randomUUID()}.${ext}`;
+    const objectName = `${args.propertyId}/${args.loteId ?? 'nuevo'}-${Date.now()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from('lote-images')

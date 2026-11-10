@@ -1,0 +1,2 @@
+CREATE POLICY "Managers can upload lote images" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'lote-images' AND (public.can_manage_property(auth.uid(), ((storage.foldername(name))[1])::uuid) OR ((storage.foldername(name))[1] = 'maps')));
+CREATE POLICY "Managers can update lote images" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'lote-images' AND (public.can_manage_property(auth.uid(), ((storage.foldername(name))[1])::uuid) OR ((storage.foldername(name))[1] = 'maps')));
